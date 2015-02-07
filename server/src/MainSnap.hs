@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import Presentation (server, ServerState (..), UsersConnected(..), UsersTyping(..))
+import Present (server, ServerState (..), UsersConnected(..), UsersTyping(..))
 import Control.Applicative
 
 import qualified Data.Set as Set
@@ -14,7 +14,7 @@ import qualified Snap.Util.FileServe as Snap
 import qualified Snap.Http.Server as Snap
 import qualified Network.SocketIO as SocketIO
 
-import Paths_ohm_chat_server (getDataDir)
+import Paths_revealjs_server (getDataDir)
 
 main :: IO ()
 main = do

@@ -10,7 +10,7 @@ let haskellPackages = pkgs.haskellPackages_ghcjs.override {
 in pkgs.callPackage ./. {
      cabal = haskellPackages.cabal.override {
        extension = self: super: { 
-         buildTools = super.buildTools ++ [ haskellPackages.ghc.ghc.parent.cabalInstall_HEAD ]; 
+         buildTools = super.buildTools ++ [ haskellPackages.ghc.ghc.parent.cabalInstall ]; 
        };
      }; 
      inherit (haskellPackages) aeson ghcjsBase ghcjsDom ghcjsPrim oHm revealJSServer lens mvc pipes

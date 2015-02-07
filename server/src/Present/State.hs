@@ -2,7 +2,12 @@
 {-# LANGUAGE DeriveGeneric #-}
 
 
-module Presentation (server, ServerState (..), UsersConnected(..), UsersTyping(..)) where
+module Present.State (
+    server
+  , ServerState (..)
+  , UsersConnected(..)
+  , UsersTyping(..)
+  ) where
 
 import           Prelude hiding (mapM_)
 
