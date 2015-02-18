@@ -25,6 +25,7 @@ module Present.Stack (
         -- $focus
 
         StackSet(..), Workspace(..), Screen(..), Stack(..), RationalRect(..),
+        WorkspaceId,
         -- *  Construction
         -- $construction
         new, view, greedyView,
@@ -137,7 +138,7 @@ data StackSet i l a sid sd =
              , hidden   :: [Workspace i l a]         -- ^ workspaces not visible anywhere
              , floating :: M.Map a RationalRect      -- ^ floating windows
              } deriving (Show, Read, Eq)
-
+ 
 -- | Visible workspaces, and their Xinerama screens.
 data Screen i l a sid sd = Screen { workspace :: !(Workspace i l a)
                                   , screen :: !sid
@@ -177,17 +178,14 @@ data Stack a = Stack { focus  :: !a        -- focused thing in this set
                      , down   :: [a] }     -- jokers to the right
     deriving (Show, Read, Eq)
 
-type WindowSet   = StackSet  WorkspaceId (Layout Window) Window ScreenId ScreenDetail
-type WindowSpace = Workspace WorkspaceId (Layout Window) Window
-
 -- | Virtual workspace indices
 type WorkspaceId = String
 
 -- | Physical screen indices
-newtype ScreenId    = S Int deriving (Eq,Ord,Show,Read,Enum,Num,Integral,Real)
+-- newtype ScreenId    = S Int deriving (Eq,Ord,Show,Read,Enum,Num,Integral,Real)
 
 -- | The 'Rectangle' with screen dimensions
-data ScreenDetail   = SD { screenRect :: !Rectangle } deriving (Eq,Show, Read)
+-- data ScreenDetail   = SD { screenRect :: !Rectangle } deriving (Eq,Show, Read)
 
 -- | this function indicates to catch that an error is expected
 abort :: String -> a

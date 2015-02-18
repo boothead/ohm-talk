@@ -6,10 +6,10 @@ let
       socketIo = self.callPackage <engine.io/socket-io> {};
       engineIoSnap = self.callPackage <engine.io/engine-io-snap> {};
       #engineIoYesod = self.callPackage ../../engine-io-yesod {};
-      example = self.callPackage ./. {};
+      example = self.callPackage ./server-default.nix {};
     };
   };
 
 in pkgs.lib.overrideDerivation haskellPackages.example (attrs: {
-     buildInputs = [ haskellPackages.cabalInstall_1_20_0_4 ] ++ attrs.buildInputs;
+     buildInputs = [ haskellPackages.cabalInstall ] ++ attrs.buildInputs;
    })

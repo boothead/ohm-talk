@@ -1,18 +1,15 @@
-{ cabal, aeson, engineIo, engineIoSnap, snapServer, snapCors
-, socketIo, stm, text, yesodStatic
-}:
+{ cabal, aeson }:
 
 cabal.mkDerivation (self: {
   pname = "revealjs-server";
-  version = "1.0.0";
+  version = "1.0.0.1";
   src = ./.;
   buildDepends = [
-    aeson engineIo engineIoSnap snapCors snapServer socketIo text
-    yesodStatic
+    aeson
   ];
   meta = {
-    homepage = "http://github.com/ocharles/engine.io";
-    license = self.stdenv.lib.licenses.bsd3;
+    homepage = "http://github.com/boothead/ohm-talk";
+    license = self.stdenv.lib.licenses.bsd2;
     platforms = self.ghc.meta.platforms;
   };
 })
