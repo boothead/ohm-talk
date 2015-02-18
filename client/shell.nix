@@ -2,7 +2,7 @@ with import <nixpkgs> {};
 let haskellPackages = pkgs.haskellPackages_ghcjs.override {
       extension = self: super: {
         oHm = self.callPackage ./oHm {};
-        revealJSServer = self.callPackage ../server/ghcjs-default.nix {};
+        revealJSServer = self.callPackage ../server {};
         client = self.callPackage ./. {};
       };
     };
