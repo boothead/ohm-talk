@@ -29,6 +29,7 @@ module Present.Layout (
     splitHorizontally, splitHorizontallyBy, splitVerticallyBy,
 
     Layout(..), LayoutClass(..), Rectangle(..),
+    fromLayout,
     
     tile
 
@@ -239,7 +240,11 @@ instance (LayoutClass l a, LayoutClass r a) => LayoutClass (Choose l r) a where
 
 -- | An existential type that can hold any object that is in 'Read'
 --   and 'LayoutClass'.
-data Layout a = forall l. (LayoutClass l a, Read (l a)) => Layout (l a)
+data Layout a = forall l. (LayoutClass l a, Read (l a), Typeable l, Typeable a) => Layout (l a)
+
+
+fromLayout :: (LayoutClass l a, Typeable l, Typeable a) => Layout a -> Maybe (l a)
+fromLayout (Layout la) = cast la
 
 -- | Using the 'Layout' as a witness, parse existentially wrapped windows
 -- from a 'String'.
