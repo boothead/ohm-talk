@@ -33,9 +33,9 @@ import           MVC
 import           Ohm.Component       (Component (..), Processor (..),
                                       idProcessor)
 import           Ohm.HTML            hiding (title)
-import           Prelude             hiding (div, filter, id, map, span)
-import qualified Prelude
 import           Present
+import VirtualDom
+import VirtualDom.Prim
 
 type SectionName = Text
 type SlideName = Text

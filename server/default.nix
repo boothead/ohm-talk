@@ -1,15 +1,17 @@
-{ cabal, aeson }:
-
-cabal.mkDerivation (self: {
+{ mkDerivation, aeson, base, containers, engine-io, engine-io-snap
+, mtl, snap-core, snap-cors, snap-server, socket-io, stdenv, stm
+, text, transformers
+}:
+mkDerivation {
   pname = "revealjs-server";
-  version = "1.0.0.1";
+  version = "1.0.0.3";
   src = ./.;
+  isLibrary = true;
+  isExecutable = true;
   buildDepends = [
-    aeson
+    aeson base containers engine-io engine-io-snap mtl snap-core
+    snap-cors snap-server socket-io stm text transformers
   ];
-  meta = {
-    homepage = "http://github.com/boothead/ohm-talk";
-    license = self.stdenv.lib.licenses.bsd2;
-    platforms = self.ghc.meta.platforms;
-  };
-})
+  homepage = "http://github.com/boothead/ohm-talk";
+  license = stdenv.lib.licenses.bsd2;
+}
