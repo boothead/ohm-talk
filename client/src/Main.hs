@@ -29,7 +29,7 @@ deck = [Slide (T.pack $ show t) (slideText t) Nothing "" | t <- [1..5]]
   where slideText i = Plain $ into h2 [fromString $ "testing " ++ show i]
 
 ws :: SlideSpace () (SlideCommand ())
-ws = Workspace "ws" (Layout $ SlideLayout 1 V) (differentiate deck)
+ws = Workspace "ws" (Layout $ SlideLayout 900 600 V) (differentiate deck)
 
 ss :: SlideState () (SlideCommand ())
 ss = StackSet c [] [] Map.empty

@@ -29,6 +29,8 @@ module Present.Layout (
     splitHorizontally, splitHorizontallyBy, splitVerticallyBy,
 
     Layout(..), LayoutClass(..), Rectangle(..),
+    Position,
+    Dimension,
     fromLayout,
     
     tile

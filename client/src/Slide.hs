@@ -27,6 +27,8 @@ import qualified Data.Text.Lens      as Lens
 import           Data.Typeable
 import           Debug.Trace
 import           GHC.Generics        (Generic)
+import GHCJS.Foreign
+import GHCJS.Types
 import           MVC
 import           Ohm.Component       (Component (..), Processor (..),
                                       idProcessor)
@@ -56,6 +58,8 @@ data Slide m edom = Slide {
 
 makeLenses ''Slide
 
+type SC m edom = Slide m edom
+
 data SlideCommand m =
     NextSlide
   | PrevSlide
@@ -69,12 +73,13 @@ data SlideCommand m =
 data Orientation = V | H deriving (Show, Read, Typeable)
 
 data SlideLayout a = SlideLayout {
-    _slWidth     :: Double
+    _slWidth     :: Dimension
+  , _slHeight    :: Dimension
   , _orientation :: Orientation
   } deriving (Show, Read, Typeable)
 
+makeLenses ''SlideLayout
 
-type SC m edom = Slide m edom
 
 type SlideState m edom = StackSet WorkspaceId (Layout (SC m edom)) (SC m edom) ScreenId ScreenDetail
 type SlideSpace m edom = Workspace WorkspaceId (Layout (SC m edom)) (SC m edom)
@@ -102,16 +107,15 @@ instance LayoutClass Layout (SC m edom) where
 
 
 instance LayoutClass SlideLayout (SC m edom) where
-  pureLayout (SlideLayout w o) r s = pasts ++ [f] ++ futures
+  pureLayout (SlideLayout w h o) r s = pasts ++ [f] ++ futures
     where pasts    = mkPast   <$> (zip [0..] $ up s)
           futures  = mkFuture <$> (zip [0..] $ down s)
-          f        = (focus s & position .~ Just Present, Rectangle 0 0 0 0)
+          f        = (focus s & position .~ Just Present, Rectangle 0 0 w h)
           mkFuture = setPosition Future
           mkPast   = setPosition Past
           setPosition :: SlidePosition -> (Int, SC m edom) -> (SC m edom, Rectangle)
           setPosition p (i, s) = (s & position .~ Just p, rect)
-            where rect = Rectangle 0 0 0 0
-
+            where rect = Rectangle 0 0 w h
 
 data AppState m edom = AppState {
     _slides :: SlideState m edom
@@ -119,6 +123,10 @@ data AppState m edom = AppState {
   } deriving Show
 
 makeLenses ''AppState
+
+
+currentOreintation :: (Typeable a, Typeable e) => AppState a e -> Maybe Orientation
+currentOreintation as = as ^? slides . to (fromLayout . layout . workspace . current) . _Just . orientation
 
 slideModel :: SlideCommand model -> AppState model (SlideCommand model) -> AppState model (SlideCommand model)
 slideModel PrevSlide ss = ss & slides %~ focusUp
@@ -134,7 +142,7 @@ renderSlide s chan model =
   with section (do
     classes .= (toCls $ s ^. position)
     attrs.at "id" ?= slideKey
-    attrs.at "style" ?= "display: block; top: 10; height:400px;"
+    attrs.at "style" ?= "display: block; top: 10;"
     attrs.at "data-transition" ?= "slide"
     setKey slideKey)
     (render chan model <$> (s ^.. content))
@@ -150,26 +158,32 @@ renderSlideSet :: Typeable model
                => Renderer (SlideCommand model) (AppState model (SlideCommand model))
 renderSlideSet chan app@(AppState ss model) =
   let ws = workspace . current $ ss
-      r = screenRect . screenDetail . current $ ss
-      recs = maybe [] (pureLayout (layout ws) r) (stack ws)
-      render chan model s = renderSlide s chan model
-      styles = unwords [ "width:"
-                       , (show . rect_width $ r) ++ "px;"
-                       , "height:"
-                       , (show . rect_height $ r) ++ "px;"
-                       ]
-      slides = render chan model . fst <$> recs
-      sl = fromLayout $ layout ws
+      sr = screenRect . screenDetail . current $ ss
+      recs = maybe [] (pureLayout (layout ws) sr) (stack ws)
+      render chan model (s, r) = 
+        let slideHTML = renderSlide s chan model
+            dims = styles r
+        in slideHTML &~ (attrs.at "style" %= fmap (toJSString.(++dims).fromJSString))
+      styles r = unwords [ "width:"
+                         , (show . rect_width $ r) ++ "px;"
+                         , "height:"
+                         , (show . rect_height $ r) ++ "px;"
+                         ]
+      slides = render chan model <$> recs
+      sl = currentOreintation app
       children = maybe slides setOrientation sl
         where
-        setOrientation (SlideLayout _ V) =
+        setOrientation V =
            [with section (classes .= ["stack", "present"])
               slides]
-        setOrientation (SlideLayout _ H) = slides
-      el = with div (classes .= ["reveal"])
+        setOrientation H = slides
+      el = with div (do
+             classes .= ["reveal"]
+             onKeypress (DOMEvent $ \x -> print ("reveal", x)))
              [ with div (do
                  classes .= ["slides"]
-                 attrs.at "style" ?= (fromString $ "display: block;" ++ styles))
+                 onKeypress (DOMEvent $ \x -> print ("slides", x))
+                 attrs.at "style" ?= (fromString $ "display: block;" ++ styles sr))
                  children
              , renderSlideControls chan app
              ]
