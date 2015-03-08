@@ -1,24 +1,20 @@
-with (import <nixpkgs> {}).pkgs;
-let
-    hsPackages = haskell-ng.packages.ghcjs.override {
-      overrides = self: super: {
-        virtual-dom = self.callPackage ./virtual-dom {};
+with import <nixpkgs> {};
+let haskellPackages = pkgs.haskellPackages_ghcjs.override {
+      extension = self: super: {
+        virtualDom = self.callPackage ./virtual-dom {};
         oHm = self.callPackage ./oHm {};
-        revealjs-server = self.callPackage
-          ({ mkDerivation, aeson, base, containers, ghcjs-base }:
-           mkDerivation {
-             pname = "revealjs-server";
-             version = "1.0.0.3";
-             src = ../server;
-             isLibrary = true;
-             isExecutable = true;
-             buildDepends = [ aeson base containers ghcjs-base ];
-             homepage = "http://github.com/boothead/ohm-talk";
-             license = stdenv.lib.licenses.bsd2;
-           }) {};
-        revealjs-client = self.callPackage ./. {};
+        revealJSServer = self.callPackage ../server {};
+        client = self.callPackage ./. {};
       };
     };
-        
-in
-  hsPackages.revealjs-client.env
+ 
+in pkgs.callPackage ./. {
+     cabal = haskellPackages.cabal.override {
+       extension = self: super: { 
+         buildTools = super.buildTools ++ [ haskellPackages.ghc.ghc.parent.cabalInstall ]; 
+       };
+     }; 
+     inherit (haskellPackages) aeson ghcjsBase ghcjsDom ghcjsPrim oHm virtualDom revealJSServer lens mvc pipes
+                               pipesConcurrency profunctors stm;
+     
+   }

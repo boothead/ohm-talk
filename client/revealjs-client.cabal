@@ -38,6 +38,6 @@ executable chat-client
                      , virtual-dom
                      , revealjs-server >= 1.0.0.3
   hs-source-dirs:      src
-  js-sources:          static/deps.js
+  -- js-sources:          static/deps.js
   other-modules:       Slide
   default-language:    Haskell2010

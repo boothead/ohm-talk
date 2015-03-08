@@ -1,18 +1,20 @@
-{ mkDerivation, aeson, base, containers, ghcjs-base, ghcjs-dom
-, ghcjs-prim, lens, mtl, mvc, oHm, pipes, pipes-concurrency
-, profunctors, revealjs-server, stdenv, stm, text, time
-, transformers
+{ cabal, aeson, ghcjsBase, ghcjsDom, ghcjsPrim, lens, mvc, oHm
+, revealJSServer, virtualDom, pipes, pipesConcurrency, profunctors, stm, time
 }:
-mkDerivation {
+
+cabal.mkDerivation (self: {
   pname = "revealjs-client";
   version = "0.1.0.0";
   src = ./.;
   isLibrary = false;
   isExecutable = true;
   buildDepends = [
-    aeson base containers ghcjs-base ghcjs-dom ghcjs-prim lens mtl mvc
-    oHm pipes pipes-concurrency profunctors revealjs-server stm text
-    time transformers
+    aeson ghcjsBase ghcjsDom ghcjsPrim lens mvc virtualDom oHm revealJSServer pipes
+    pipesConcurrency profunctors stm time
   ];
-  license = stdenv.lib.licenses.unfree;
-}
+  doCheck = false;
+  meta = {
+    license = self.stdenv.lib.licenses.unfree;
+    platforms = self.ghc.meta.platforms;
+  };
+})

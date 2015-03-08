@@ -36,6 +36,7 @@ import           Ohm.HTML            hiding (title)
 import           Present
 import VirtualDom
 import VirtualDom.Prim
+import qualified VirtualDom.HTML.Attributes as A
 
 type SectionName = Text
 type SlideName = Text
@@ -128,23 +129,30 @@ makeLenses ''AppState
 currentOreintation :: (Typeable a, Typeable e) => AppState a e -> Maybe Orientation
 currentOreintation as = as ^? slides . to (fromLayout . layout . workspace . current) . _Just . orientation
 
+--------------------------------------------------------------------------------
+
 slideModel :: SlideCommand model -> AppState model (SlideCommand model) -> AppState model (SlideCommand model)
 slideModel PrevSlide ss = ss & slides %~ focusUp
 slideModel NextSlide ss = ss & slides %~ focusDown
 slideModel _ ss = ss
 
-renderSlideContent :: SlideContent model (SlideCommand model) -> Renderer (SlideCommand model) model
+--------------------------------------------------------------------------------
+
+type SlideRenderer model = Renderer (SlideCommand model) model
+
+renderSlideContent :: SlideContent model (SlideCommand model) -> SlideRenderer model
 renderSlideContent (Plain h) _ _ = h
 renderSlideContent (Pointer l r) chan (Lens.view l -> m) = r chan m
 
-renderSlide :: Slide model (SlideCommand model) -> DOMEvent (SlideCommand model) -> model -> HTML
+renderSlide :: Slide model (SlideCommand model) -> SlideRenderer model
 renderSlide s chan model =
-  with section (do
+  with section_ (do
     classes .= (toCls $ s ^. position)
-    attrs.at "id" ?= slideKey
-    attrs.at "style" ?= "display: block; top: 10;"
-    attrs.at "data-transition" ?= "slide"
-    setKey slideKey)
+    A.id_ ?= slideKey
+    A.style_ ?= "display: block; top: 10;"
+    attributes . at "data-transition" ?= "slide"
+    onKeyPress (DOMEvent $ \x -> print ("slide-section", x))
+    key .= slideKey)
     (render chan model <$> (s ^.. content))
   where
   slideKey = s ^. title.Lens.unpacked.to fromString
@@ -163,7 +171,7 @@ renderSlideSet chan app@(AppState ss model) =
       render chan model (s, r) = 
         let slideHTML = renderSlide s chan model
             dims = styles r
-        in slideHTML &~ (attrs.at "style" %= fmap (toJSString.(++dims).fromJSString))
+        in editing slideHTML (A.style_ %= fmap (toJSString.(++dims).fromJSString))
       styles r = unwords [ "width:"
                          , (show . rect_width $ r) ++ "px;"
                          , "height:"
@@ -174,16 +182,16 @@ renderSlideSet chan app@(AppState ss model) =
       children = maybe slides setOrientation sl
         where
         setOrientation V =
-           [with section (classes .= ["stack", "present"])
+           [with section_ (classes .= ["stack", "present"])
               slides]
         setOrientation H = slides
-      el = with div (do
+      el = with div_ (do
              classes .= ["reveal"]
-             onKeypress (DOMEvent $ \x -> print ("reveal", x)))
-             [ with div (do
+             onKeyPress (DOMEvent $ \x -> print ("reveal", x)))
+             [ with div_ (do
                  classes .= ["slides"]
-                 onKeypress (DOMEvent $ \x -> print ("slides", x))
-                 attrs.at "style" ?= (fromString $ "display: block;" ++ styles sr))
+                 onKeyPress (DOMEvent $ \x -> print ("slides", x))
+                 A.style_ ?= (fromString $ "display: block;" ++ styles sr))
                  children
              , renderSlideControls chan app
              ]
@@ -191,9 +199,9 @@ renderSlideSet chan app@(AppState ss model) =
 
 renderSlideControls :: Renderer (SlideCommand model) (AppState model (SlideCommand model))
 renderSlideControls chan (_slides -> ss) =
-  with aside (do
+  with aside_ (do
      classes .= ["controls"]
-     attrs.at "style" ?= "display: block"
+     A.style_ ?= "display: block"
      )
     [control dir cmd f | (dir, cmd, f) <- arrows]
   where
@@ -204,7 +212,7 @@ renderSlideControls chan (_slides -> ss) =
            -- , ("down", False)
            ]
   control dir cmd f =
-    with div (do
+    with div_ (do
       classes .= ["navigate-" ++ dir]
       traverse_ (enabled cmd . f) $ stack ws)
       []
