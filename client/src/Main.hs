@@ -13,8 +13,10 @@ import           Data.String            (fromString)
 import qualified Data.Text              as T
 import           GHCJS.Foreign
 import           GHCJS.Types
+import           MVC
 import           Ohm.Component
 import           Ohm.HTML
+import           Ohm.KeyMaster
 import           Prelude                hiding (div, filter, id, map, span)
 import           Present
 import           Slide
@@ -37,4 +39,11 @@ ss = StackSet c [] [] Map.empty
 
 main = do
   _ <- initDomDelegator
-  void $ runComponent (AppState ss ()) () slideComponent
+  km <- initKeyMaster
+  (keySink, keySource) <- spawn unbounded
+  withKeys km keySink [
+      ("ctrl+left", PrevSlide)
+    , ("ctrl+right", NextSlide)]
+  modelSink <- runComponent (AppState ss ()) () slideComponent
+  forkProcessor () $ for (fromInput keySource) (runProcessor $ domEventsProcessor slideComponent)
+               >-> (toOutput modelSink)

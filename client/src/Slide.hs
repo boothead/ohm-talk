@@ -147,11 +147,10 @@ renderSlideContent (Pointer l r) chan (Lens.view l -> m) = r chan m
 renderSlide :: Slide model (SlideCommand model) -> SlideRenderer model
 renderSlide s chan model =
   with section_ (do
-    classes .= (toCls $ s ^. position)
+    A.classes .= (toCls $ s ^. position)
     A.id_ ?= slideKey
     A.style_ ?= "display: block; top: 10;"
     attributes . at "data-transition" ?= "slide"
-    onKeyPress (DOMEvent $ \x -> print ("slide-section", x))
     key .= slideKey)
     (render chan model <$> (s ^.. content))
   where
@@ -182,15 +181,12 @@ renderSlideSet chan app@(AppState ss model) =
       children = maybe slides setOrientation sl
         where
         setOrientation V =
-           [with section_ (classes .= ["stack", "present"])
+           [with section_ (A.classes .= ["stack", "present"])
               slides]
         setOrientation H = slides
-      el = with div_ (do
-             classes .= ["reveal"]
-             onKeyPress (DOMEvent $ \x -> print ("reveal", x)))
+      el = with div_ (A.classes .= ["reveal"])
              [ with div_ (do
-                 classes .= ["slides"]
-                 onKeyPress (DOMEvent $ \x -> print ("slides", x))
+                 A.classes .= ["slides"]
                  A.style_ ?= (fromString $ "display: block;" ++ styles sr))
                  children
              , renderSlideControls chan app
@@ -200,20 +196,20 @@ renderSlideSet chan app@(AppState ss model) =
 renderSlideControls :: Renderer (SlideCommand model) (AppState model (SlideCommand model))
 renderSlideControls chan (_slides -> ss) =
   with aside_ (do
-     classes .= ["controls"]
+     A.classes .= ["controls"]
      A.style_ ?= "display: block"
      )
     [control dir cmd f | (dir, cmd, f) <- arrows]
   where
   ws = workspace . current $ ss
-  arrows = [ ("left", PrevSlide, up)
+  arrows = [ (("left" :: String), PrevSlide, up)
            , ("right", NextSlide, down)
            -- , ("up", False)
            -- , ("down", False)
            ]
   control dir cmd f =
     with div_ (do
-      classes .= ["navigate-" ++ dir]
+      A.classes .= [toJSString $ "navigate-" ++ dir]
       traverse_ (enabled cmd . f) $ stack ws)
       []
   --enabled :: SlideCommand model -> [SC model (SlideCommand model)] -> State HTML ()
@@ -221,7 +217,7 @@ renderSlideControls chan (_slides -> ss) =
     case slides of
       [] -> onClick $ DOMEvent (const $ putStrLn "Click prevented")
       _  -> do
-        classes %= ("enabled":)
+        A.classes %= ("enabled":)
         onClick $ contramap (const cmd) chan
 
 slideProcessor :: MonadIO m => Processor m (SlideCommand ()) (SlideCommand ())
