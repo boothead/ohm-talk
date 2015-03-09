@@ -42,8 +42,11 @@ main = do
   km <- initKeyMaster
   (keySink, keySource) <- spawn unbounded
   withKeys km keySink [
-      ("ctrl+left", PrevSlide)
-    , ("ctrl+right", NextSlide)]
+      ("left", PrevSlide)
+    , ("right", NextSlide)
+    , ("v", ChangeLayout (Layout $ SlideLayout 900 600 V))
+    , ("h", ChangeLayout (Layout $ SlideLayout 900 600 H))
+    ]
   modelSink <- runComponent (AppState ss ()) () slideComponent
   forkProcessor () $ for (fromInput keySource) (runProcessor $ domEventsProcessor slideComponent)
                >-> (toOutput modelSink)

@@ -68,7 +68,7 @@ data SlideCommand m =
   | NextSection
   | PrevSection
   | ToSection SectionName
-  | ChangeLayout (SlideLayout (SC m (SlideCommand m)))
+  | ChangeLayout (Layout (SC m (SlideCommand m)))
   deriving (Show, Generic, Typeable)
 
 data Orientation = V | H deriving (Show, Read, Typeable)
@@ -131,10 +131,23 @@ currentOreintation as = as ^? slides . to (fromLayout . layout . workspace . cur
 
 --------------------------------------------------------------------------------
 
-slideModel :: SlideCommand model -> AppState model (SlideCommand model) -> AppState model (SlideCommand model)
+slideModel
+  :: SlideCommand model
+  -> AppState model (SlideCommand model)
+  -> AppState model (SlideCommand model)
 slideModel PrevSlide ss = ss & slides %~ focusUp
 slideModel NextSlide ss = ss & slides %~ focusDown
-slideModel _ ss = ss
+slideModel (ChangeLayout l) ss = ss & slides %~ setLayout l
+  where
+    setLayout
+      :: Layout (SC model (SlideCommand model))
+      -> SlideState model (SlideCommand model)
+      -> SlideState model (SlideCommand model)
+    setLayout l ss@(StackSet { current = c@(Screen { workspace = ws })}) = 
+      
+      --handleMessage (W.layout ws) (SomeMessage ReleaseResources)
+      ss {current = c { workspace = ws { layout = l } } }
+
 
 --------------------------------------------------------------------------------
 
