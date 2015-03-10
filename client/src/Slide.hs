@@ -10,6 +10,7 @@
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeSynonymInstances       #-}
 {-# LANGUAGE ViewPatterns               #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Slide where
 
@@ -45,6 +46,8 @@ data SlidePosition = Past | Present | Future deriving (Show, Generic)
 
 data SlideContent m edom =
     Plain HTML
+  | MD Text
+  | MDFile SectionName
   | forall b. Pointer (Lens' m b) (Renderer edom b)
 
 instance Show (SlideContent a e) where
@@ -155,7 +158,17 @@ type SlideRenderer model = Renderer (SlideCommand model) model
 
 renderSlideContent :: SlideContent model (SlideCommand model) -> SlideRenderer model
 renderSlideContent (Plain h) _ _ = h
+renderSlideContent (MDFile _) _ _ = div_
 renderSlideContent (Pointer l r) chan (Lens.view l -> m) = r chan m
+
+modifySlide :: MonadState HTMLElement m => (SlideContent model (SlideCommand model)) -> m ()
+modifySlide (MDFile sec) = do
+  attributes.at "data-markdown" ?= "example.md"
+  attributes.at "data-separator" ?= "^\n\n\n"
+  attributes.at "data-separator-vertical" ?= "^\n\n"
+  attributes.at "data-separator-notes" ?= "^Note:"
+  attributes.at "data-charset" ?= "iso-8859-15"
+modifySlide _ = return ()
 
 renderSlide :: Slide model (SlideCommand model) -> SlideRenderer model
 renderSlide s chan model =
@@ -164,7 +177,8 @@ renderSlide s chan model =
     A.id_ ?= slideKey
     A.style_ ?= "display: block; top: 10;"
     attributes . at "data-transition" ?= "slide"
-    key .= slideKey)
+    key .= slideKey
+    modifySlide (s ^. content))
     (render chan model <$> (s ^.. content))
   where
   slideKey = s ^. title.Lens.unpacked.to fromString

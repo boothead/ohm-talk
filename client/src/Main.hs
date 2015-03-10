@@ -27,9 +27,10 @@ import           Slide
 --         rect = Rectangle 0 0 0 0
 
 introSection :: [Slide () (SlideCommand ()) ]
-introSection = [Slide (T.pack $ show t) (slideText t) Nothing "" | t <- [1..5]]
+introSection = mdSlide : [Slide (T.pack $ show t) (slideText t) Nothing "" | t <- [1..5]]
   where slideText i = Plain $ into h2_ [fromString $ "intro " ++ show i]
-
+        mdSlide = Slide ("Markdown") (MDFile "mdtest.md") Nothing "A Note"
+         
 intro :: SlideSpace () (SlideCommand ())
 intro = Workspace "intro" (Layout $ SlideLayout 900 600 V) (differentiate introSection)
 
