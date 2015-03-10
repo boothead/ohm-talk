@@ -26,16 +26,24 @@ import           Slide
 --   where s' = s &~ (classes .= [c])
 --         rect = Rectangle 0 0 0 0
 
-deck :: [Slide () (SlideCommand ()) ]
-deck = [Slide (T.pack $ show t) (slideText t) Nothing "" | t <- [1..5]]
-  where slideText i = Plain $ into h2_ [fromString $ "testing " ++ show i]
+introSection :: [Slide () (SlideCommand ()) ]
+introSection = [Slide (T.pack $ show t) (slideText t) Nothing "" | t <- [1..5]]
+  where slideText i = Plain $ into h2_ [fromString $ "intro " ++ show i]
 
-ws :: SlideSpace () (SlideCommand ())
-ws = Workspace "ws" (Layout $ SlideLayout 900 600 V) (differentiate deck)
+intro :: SlideSpace () (SlideCommand ())
+intro = Workspace "intro" (Layout $ SlideLayout 900 600 V) (differentiate introSection)
+
+problemSection :: [Slide () (SlideCommand ()) ]
+problemSection = [Slide (T.pack $ show t) (slideText t) Nothing "" | t <- [1..5]]
+  where slideText i = Plain $ into h2_ [fromString $ "problem " ++ show i]
+
+
+problem :: SlideSpace () (SlideCommand ())
+problem = Workspace "problem" (Layout $ SlideLayout 900 600 V) (differentiate problemSection)
 
 ss :: SlideState () (SlideCommand ())
-ss = StackSet c [] [] Map.empty
-  where c = Screen ws (S 0) (SD $ Rectangle 0 0 900 600)
+ss = StackSet (scrn intro) [] [problem] Map.empty
+  where scrn slides = Screen slides (S 0) (SD $ Rectangle 0 0 900 600)
 
 main = do
   _ <- initDomDelegator
@@ -46,6 +54,8 @@ main = do
     , ("right", NextSlide)
     , ("v", ChangeLayout (Layout $ SlideLayout 900 600 V))
     , ("h", ChangeLayout (Layout $ SlideLayout 900 600 H))
+    , ("1", ToSection "intro")
+    , ("2", ToSection "problem")
     ]
   modelSink <- runComponent (AppState ss ()) () slideComponent
   forkProcessor () $ for (fromInput keySource) (runProcessor $ domEventsProcessor slideComponent)

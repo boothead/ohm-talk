@@ -82,8 +82,8 @@ data SlideLayout a = SlideLayout {
 makeLenses ''SlideLayout
 
 
-type SlideState m edom = StackSet WorkspaceId (Layout (SC m edom)) (SC m edom) ScreenId ScreenDetail
-type SlideSpace m edom = Workspace WorkspaceId (Layout (SC m edom)) (SC m edom)
+type SlideState m edom = StackSet SectionName (Layout (SC m edom)) (SC m edom) ScreenId ScreenDetail
+type SlideSpace m edom = Workspace SectionName (Layout (SC m edom)) (SC m edom)
 
 
 --makePrisms ''SlideContent
@@ -147,7 +147,7 @@ slideModel (ChangeLayout l) ss = ss & slides %~ setLayout l
       
       --handleMessage (W.layout ws) (SomeMessage ReleaseResources)
       ss {current = c { workspace = ws { layout = l } } }
-
+slideModel (ToSection s) ss = ss & slides %~ greedyView s
 
 --------------------------------------------------------------------------------
 
