@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveFunctor              #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE ExistentialQuantification  #-}
+{-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE OverloadedStrings          #-}
@@ -10,29 +11,28 @@
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeSynonymInstances       #-}
 {-# LANGUAGE ViewPatterns               #-}
-{-# LANGUAGE FlexibleContexts #-}
 
 module Slide where
 
 import           Control.Applicative
-import           Control.Lens        hiding (aside)
-import qualified Control.Lens        as Lens
+import           Control.Lens               hiding (aside)
+import qualified Control.Lens               as Lens
 --import           Data.Aeson   (FromJSON, ToJSON)
 --import           Data.Aeson   as Aeson
 import           Control.Monad.State
-import           Data.Foldable       (traverse_)
-import           Data.String         (fromString)
-import           Data.Text           (Text)
-import qualified Data.Text.Lens      as Lens
+import           Data.Foldable              (traverse_)
+import           Data.String                (fromString)
+import           Data.Text                  (Text)
+import qualified Data.Text.Lens             as Lens
 import           Data.Typeable
-import           GHC.Generics        (Generic)
-import GHCJS.Foreign
+import           GHC.Generics               (Generic)
+import           GHCJS.Foreign
 import           MVC
-import           Ohm.Component       (Component (..), Processor (..))
+import           Ohm.Component              (Component (..), Processor (..))
 import           Ohm.HTML
 import           Present
-import VirtualDom.Prim
 import qualified VirtualDom.HTML.Attributes as A
+import           VirtualDom.Prim
 
 type SectionName = Text
 type SlideName = Text
@@ -117,8 +117,8 @@ instance LayoutClass SlideLayout (SC m edom) where
             where rect = Rectangle 0 0 w h
 
 data AppState m edom = AppState {
-    _slides :: SlideState m edom
-  , _application    :: m
+    _slides      :: SlideState m edom
+  , _application :: m
   } deriving Show
 
 makeLenses ''AppState
@@ -141,7 +141,7 @@ slideModel (ChangeLayout lo) as = as & slides %~ setLayout lo
       :: Layout (SC model (SlideCommand model))
       -> SlideState model (SlideCommand model)
       -> SlideState model (SlideCommand model)
-    setLayout l ss@(StackSet { current = c@(Screen { workspace = ws })}) = 
+    setLayout l ss@(StackSet { current = c@(Screen { workspace = ws })}) =
       ss {current = c { workspace = ws { layout = l } } }
 slideModel (ToSection s) ss = ss & slides %~ greedyView s
 slideModel _ ss = ss
@@ -188,7 +188,7 @@ renderSlideSet chan app@(AppState ss mdl) =
   let ws = workspace . current $ ss
       sr = screenRect . screenDetail . current $ ss
       recs = maybe [] (pureLayout (layout ws) sr) (stack ws)
-      render' mdl' (s, r) = 
+      render' mdl' (s, r) =
         let slideHTML = renderSlide s chan mdl'
             dims = styles r
         in editing slideHTML (A.style_ %= fmap (toJSString.(++dims).fromJSString))

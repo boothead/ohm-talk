@@ -5,14 +5,14 @@
 
 module Main where
 
-import qualified Data.Map               as Map
-import           Data.String            (fromString)
-import qualified Data.Text              as T
+import qualified Data.Map      as Map
+import           Data.String   (fromString)
+import qualified Data.Text     as T
 import           MVC
 import           Ohm.Component
 import           Ohm.HTML
 import           Ohm.KeyMaster
-import           Prelude                hiding (div, filter, id, map, span)
+import           Prelude       hiding (div, filter, id, map, span)
 import           Present
 import           Slide
 
@@ -25,7 +25,7 @@ introSection :: [Slide () (SlideCommand ()) ]
 introSection = mdSlide : [Slide (T.pack $ show t) (slideText t) Nothing "" | t <- [(1::Int)..5]]
   where slideText i = Plain $ into h2_ [fromString $ "intro " ++ show i]
         mdSlide = Slide ("Markdown") (MDFile "mdtest.md") Nothing "A Note"
-         
+
 intro :: SlideSpace () (SlideCommand ())
 intro = Workspace "intro" (Layout $ SlideLayout 900 600 V) (differentiate introSection)
 
