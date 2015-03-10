@@ -23,19 +23,14 @@ import           Control.Monad.State
 import           Data.Foldable       (traverse_)
 import           Data.String         (fromString)
 import           Data.Text           (Text)
-import qualified Data.Text           as T
 import qualified Data.Text.Lens      as Lens
 import           Data.Typeable
-import           Debug.Trace
 import           GHC.Generics        (Generic)
 import GHCJS.Foreign
-import GHCJS.Types
 import           MVC
-import           Ohm.Component       (Component (..), Processor (..),
-                                      idProcessor)
-import           Ohm.HTML            hiding (title)
+import           Ohm.Component       (Component (..), Processor (..))
+import           Ohm.HTML
 import           Present
-import VirtualDom
 import VirtualDom.Prim
 import qualified VirtualDom.HTML.Attributes as A
 
@@ -111,19 +106,19 @@ instance LayoutClass Layout (SC m edom) where
 
 
 instance LayoutClass SlideLayout (SC m edom) where
-  pureLayout (SlideLayout w h o) r s = pasts ++ [f] ++ futures
+  pureLayout (SlideLayout w h _o) _r s = pasts ++ [f] ++ futures
     where pasts    = mkPast   <$> (zip [0..] $ up s)
           futures  = mkFuture <$> (zip [0..] $ down s)
           f        = (focus s & position .~ Just Present, Rectangle 0 0 w h)
           mkFuture = setPosition Future
           mkPast   = setPosition Past
           setPosition :: SlidePosition -> (Int, SC m edom) -> (SC m edom, Rectangle)
-          setPosition p (i, s) = (s & position .~ Just p, rect)
+          setPosition p (_i, sc) = (sc & position .~ Just p, rect)
             where rect = Rectangle 0 0 w h
 
 data AppState m edom = AppState {
     _slides :: SlideState m edom
-  , _app    :: m
+  , _application    :: m
   } deriving Show
 
 makeLenses ''AppState
@@ -138,32 +133,31 @@ slideModel
   :: SlideCommand model
   -> AppState model (SlideCommand model)
   -> AppState model (SlideCommand model)
-slideModel PrevSlide ss = ss & slides %~ focusUp
-slideModel NextSlide ss = ss & slides %~ focusDown
-slideModel (ChangeLayout l) ss = ss & slides %~ setLayout l
+slideModel PrevSlide as = as & slides %~ focusUp
+slideModel NextSlide as = as & slides %~ focusDown
+slideModel (ChangeLayout lo) as = as & slides %~ setLayout lo
   where
     setLayout
       :: Layout (SC model (SlideCommand model))
       -> SlideState model (SlideCommand model)
       -> SlideState model (SlideCommand model)
     setLayout l ss@(StackSet { current = c@(Screen { workspace = ws })}) = 
-      
-      --handleMessage (W.layout ws) (SomeMessage ReleaseResources)
       ss {current = c { workspace = ws { layout = l } } }
 slideModel (ToSection s) ss = ss & slides %~ greedyView s
-
+slideModel _ ss = ss
 --------------------------------------------------------------------------------
 
 type SlideRenderer model = Renderer (SlideCommand model) model
 
 renderSlideContent :: SlideContent model (SlideCommand model) -> SlideRenderer model
 renderSlideContent (Plain h) _ _ = h
+renderSlideContent (MD md) _ _ = text md
 renderSlideContent (MDFile _) _ _ = div_
 renderSlideContent (Pointer l r) chan (Lens.view l -> m) = r chan m
 
 modifySlide :: MonadState HTMLElement m => (SlideContent model (SlideCommand model)) -> m ()
 modifySlide (MDFile sec) = do
-  attributes.at "data-markdown" ?= "example.md"
+  attributes.at "data-markdown" ?= toJSString sec
   attributes.at "data-separator" ?= "^\n\n\n"
   attributes.at "data-separator-vertical" ?= "^\n\n"
   attributes.at "data-separator-notes" ?= "^Note:"
@@ -171,7 +165,7 @@ modifySlide (MDFile sec) = do
 modifySlide _ = return ()
 
 renderSlide :: Slide model (SlideCommand model) -> SlideRenderer model
-renderSlide s chan model =
+renderSlide s chan mdl =
   with section_ (do
     A.classes .= (toCls $ s ^. position)
     A.id_ ?= slideKey
@@ -179,23 +173,23 @@ renderSlide s chan model =
     attributes . at "data-transition" ?= "slide"
     key .= slideKey
     modifySlide (s ^. content))
-    (render chan model <$> (s ^.. content))
+    (render' mdl <$> (s ^.. content))
   where
   slideKey = s ^. title.Lens.unpacked.to fromString
   toCls Nothing = []
   toCls (Just Present) = ["present"]
   toCls (Just Past) = ["past"]
   toCls (Just Future) = ["future"]
-  render chan model sc = renderSlideContent sc chan model
+  render' mdl' sc = renderSlideContent sc chan mdl'
 
 renderSlideSet :: Typeable model
                => Renderer (SlideCommand model) (AppState model (SlideCommand model))
-renderSlideSet chan app@(AppState ss model) =
+renderSlideSet chan app@(AppState ss mdl) =
   let ws = workspace . current $ ss
       sr = screenRect . screenDetail . current $ ss
       recs = maybe [] (pureLayout (layout ws) sr) (stack ws)
-      render chan model (s, r) = 
-        let slideHTML = renderSlide s chan model
+      render' mdl' (s, r) = 
+        let slideHTML = renderSlide s chan mdl'
             dims = styles r
         in editing slideHTML (A.style_ %= fmap (toJSString.(++dims).fromJSString))
       styles r = unwords [ "width:"
@@ -203,19 +197,19 @@ renderSlideSet chan app@(AppState ss model) =
                          , "height:"
                          , (show . rect_height $ r) ++ "px;"
                          ]
-      slides = render chan model <$> recs
+      slides' = render' mdl <$> recs
       sl = currentOreintation app
-      children = maybe slides setOrientation sl
+      children' = maybe slides' setOrientation sl
         where
         setOrientation V =
            [with section_ (A.classes .= ["stack", "present"])
-              slides]
-        setOrientation H = slides
+              slides']
+        setOrientation H = slides'
       el = with div_ (A.classes .= ["reveal"])
              [ with div_ (do
                  A.classes .= ["slides"]
                  A.style_ ?= (fromString $ "display: block;" ++ styles sr))
-                 children
+                 children'
              , renderSlideControls chan app
              ]
   in el
@@ -240,17 +234,21 @@ renderSlideControls chan (_slides -> ss) =
       traverse_ (enabled cmd . f) $ stack ws)
       []
   --enabled :: SlideCommand model -> [SC model (SlideCommand model)] -> State HTML ()
-  enabled cmd slides = do
-    case slides of
+  enabled cmd slides' = do
+    case slides' of
       [] -> onClick $ DOMEvent (const $ putStrLn "Click prevented")
       _  -> do
         A.classes %= ("enabled":)
         onClick $ contramap (const cmd) chan
 
-slideProcessor :: MonadIO m => Processor m (SlideCommand ()) (SlideCommand ())
+slideProcessor :: MonadIO m => Processor m (SlideCommand model) (SlideCommand model)
 slideProcessor = Processor $ \cmd -> do
       liftIO $ print cmd
       yield cmd
 
---slideComponent :: Component () (SlideCommand ()) A
+slideComponent
+  :: Typeable model
+  => Component env (SlideCommand model)
+                   (AppState model (SlideCommand model))
+                   (SlideCommand model)
 slideComponent = Component slideModel renderSlideSet slideProcessor
