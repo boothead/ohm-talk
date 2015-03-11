@@ -151,17 +151,20 @@ type SlideRenderer model = Renderer (SlideCommand model) model
 
 renderSlideContent :: SlideContent model (SlideCommand model) -> SlideRenderer model
 renderSlideContent (Plain h) _ _ = h
-renderSlideContent (MD md) _ _ = text md
+renderSlideContent (MD md) _ _ = with script_
+                                   (A.type_ ?= "text/template")
+                                   [text md]
 renderSlideContent (MDFile _) _ _ = div_
 renderSlideContent (Pointer l r) chan (Lens.view l -> m) = r chan m
 
 modifySlide :: MonadState HTMLElement m => (SlideContent model (SlideCommand model)) -> m ()
 modifySlide (MDFile sec) = do
   attributes.at "data-markdown" ?= toJSString sec
-  attributes.at "data-separator" ?= "^\n\n\n"
-  attributes.at "data-separator-vertical" ?= "^\n\n"
-  attributes.at "data-separator-notes" ?= "^Note:"
-  attributes.at "data-charset" ?= "iso-8859-15"
+  -- attributes.at "data-separator" ?= "^\n\n\n"
+  -- attributes.at "data-separator-vertical" ?= "^\n\n"
+  -- attributes.at "data-separator-notes" ?= "^Note:"
+  -- attributes.at "data-charset" ?= "iso-8859-15"
+modifySlide (MD _) = attributes.at "data-markdown" ?= ""
 modifySlide _ = return ()
 
 renderSlide :: Slide model (SlideCommand model) -> SlideRenderer model

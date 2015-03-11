@@ -22,10 +22,15 @@ import           Slide
 --         rect = Rectangle 0 0 0 0
 
 introSection :: [Slide () (SlideCommand ()) ]
-introSection = mdSlide : [Slide (T.pack $ show t) (slideText t) Nothing "" | t <- [(1::Int)..5]]
+introSection = mdExtSlide : mdSlide : [Slide (T.pack $ show t) (slideText t) Nothing "" | t <- [(1::Int)..5]]
   where slideText i = Plain $ into h2_ [fromString $ "intro " ++ show i]
-        mdSlide = Slide ("Markdown") (MDFile "mdtest.md") Nothing "A Note"
-
+        mdExtSlide = Slide ("Markdown") (MDFile "mdtest.md") Nothing "A Note"
+        mdSlide = Slide "Inline" (MD md) Nothing "Inline note"
+        md = T.pack $ unlines [
+                 "# Inline test"
+               , ""
+               , "Blah"
+               ]
 intro :: SlideSpace () (SlideCommand ())
 intro = Workspace "intro" (Layout $ SlideLayout 900 600 V) (differentiate introSection)
 
