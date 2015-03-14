@@ -422,7 +422,7 @@
 	 * not found, it is created.
 	 */
 	function setupDOM() {
-
+            
 		// Prevent transitions while we're loading
 		dom.slides.classList.add( 'no-transition' );
 

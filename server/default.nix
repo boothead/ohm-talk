@@ -1,11 +1,11 @@
-{ cabal, aeson }:
+{ cabal, aeson, lens }:
 
 cabal.mkDerivation (self: {
   pname = "revealjs-server";
   version = "1.0.0.1";
   src = ./.;
   buildDepends = [
-    aeson
+    aeson lens
   ];
   meta = {
     homepage = "http://github.com/boothead/ohm-talk";

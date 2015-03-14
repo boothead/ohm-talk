@@ -3,6 +3,7 @@
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE ExistentialQuantification  #-}
 {-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE OverloadedStrings          #-}
@@ -10,6 +11,7 @@
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeSynonymInstances       #-}
+{-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE ViewPatterns               #-}
 
 module Slide where
@@ -25,60 +27,29 @@ import           Data.String                (fromString)
 import           Data.Text                  (Text)
 import qualified Data.Text.Lens             as Lens
 import           Data.Typeable
-import           GHC.Generics               (Generic)
 import           GHCJS.Foreign
 import           MVC
 import           Ohm.Component              (Component (..), Processor (..))
 import           Ohm.HTML
 import           Present
+import           Present.Types
 import qualified VirtualDom.HTML.Attributes as A
 import           VirtualDom.Prim
 
-type SectionName = Text
-type SlideName = Text
 
-data SlidePosition = Past | Present | Future deriving (Show, Generic)
-
-data SlideContent m edom =
+data SlideContent model edom =
     Plain HTML
   | MD Text
   | MDFile SectionName
-  | forall b. Pointer (Lens' m b) (Renderer edom b)
+  | forall b. Pointer (Lens' model b) (Renderer edom b)
+  deriving (Typeable)
 
 instance Show (SlideContent a e) where
   show _ = "SC"
 
-data Slide m edom = Slide {
-    _title    :: SlideName
-  , _content  :: SlideContent m edom
-  , _position :: Maybe SlidePosition
-  , _notes    :: Text
-  } deriving (Show, Generic, Typeable)
+type SC model edom = Slide (SlideContent model edom)
 
-makeLenses ''Slide
-
-type SC m edom = Slide m edom
-
-data SlideCommand m =
-    NextSlide
-  | PrevSlide
-  | ToSlide SlideName
-  | NextSection
-  | PrevSection
-  | ToSection SectionName
-  | ChangeLayout (Layout (SC m (SlideCommand m)))
-  deriving (Show, Generic, Typeable)
-
-data Orientation = V | H deriving (Show, Read, Typeable)
-
-data SlideLayout a = SlideLayout {
-    _slWidth     :: Dimension
-  , _slHeight    :: Dimension
-  , _orientation :: Orientation
-  } deriving (Show, Read, Typeable)
-
-makeLenses ''SlideLayout
-
+-- type instance HasLayout (Slide m) = (Layout (SC m)) 
 
 type SlideState m edom = StackSet SectionName (Layout (SC m edom)) (SC m edom) ScreenId ScreenDetail
 type SlideSpace m edom = Workspace SectionName (Layout (SC m edom)) (SC m edom)
@@ -130,26 +101,32 @@ currentOreintation as = as ^? slides . to (fromLayout . layout . workspace . cur
 --------------------------------------------------------------------------------
 
 slideModel
-  :: SlideCommand model
-  -> AppState model (SlideCommand model)
-  -> AppState model (SlideCommand model)
+  :: (Typeable model, Typeable edom)
+  => SlideCommand edom
+  -> AppState model edom
+  -> AppState model edom
 slideModel PrevSlide as = as & slides %~ focusUp
 slideModel NextSlide as = as & slides %~ focusDown
-slideModel (ChangeLayout lo) as = as & slides %~ setLayout lo
+slideModel (ChangeLayout o) as = as & slides %~ setLayout
   where
-    setLayout
-      :: Layout (SC model (SlideCommand model))
-      -> SlideState model (SlideCommand model)
-      -> SlideState model (SlideCommand model)
-    setLayout l ss@(StackSet { current = c@(Screen { workspace = ws })}) =
-      ss {current = c { workspace = ws { layout = l } } }
+    -- orientationLens = to (fromLayout . layout) . _Just
+    -- setLayout
+    --   :: Orientation
+    --   -> SlideState model edom
+      
+    --   -> SlideState model edom
+    setLayout ss@(StackSet { current = c@(Screen { workspace = ws })}) =
+      let l = case (fromLayout . layout $ ws) of
+                Just sl -> Layout $ sl { _orientation = o }
+                Nothing -> layout ws
+      in ss {current = c { workspace = ws { layout = l } } }
 slideModel (ToSection s) ss = ss & slides %~ greedyView s
 slideModel _ ss = ss
 --------------------------------------------------------------------------------
 
-type SlideRenderer model = Renderer (SlideCommand model) model
+type SlideRenderer edom model = Renderer (SlideCommand edom) model
 
-renderSlideContent :: SlideContent model (SlideCommand model) -> SlideRenderer model
+renderSlideContent :: SlideContent model edom -> Renderer edom model
 renderSlideContent (Plain h) _ _ = h
 renderSlideContent (MD md) _ _ = with script_
                                    (A.type_ ?= "text/template")
@@ -157,7 +134,7 @@ renderSlideContent (MD md) _ _ = with script_
 renderSlideContent (MDFile _) _ _ = div_
 renderSlideContent (Pointer l r) chan (Lens.view l -> m) = r chan m
 
-modifySlide :: MonadState HTMLElement m => (SlideContent model (SlideCommand model)) -> m ()
+modifySlide :: MonadState HTMLElement m => SlideContent model edom -> m ()
 modifySlide (MDFile sec) = do
   attributes.at "data-markdown" ?= toJSString sec
   -- attributes.at "data-separator" ?= "^\n\n\n"
@@ -167,7 +144,7 @@ modifySlide (MDFile sec) = do
 modifySlide (MD _) = attributes.at "data-markdown" ?= ""
 modifySlide _ = return ()
 
-renderSlide :: Slide model (SlideCommand model) -> SlideRenderer model
+renderSlide :: SC model edom -> Renderer edom model
 renderSlide s chan mdl =
   with section_ (do
     A.classes .= (toCls $ s ^. position)
@@ -185,14 +162,14 @@ renderSlide s chan mdl =
   toCls (Just Future) = ["future"]
   render' mdl' sc = renderSlideContent sc chan mdl'
 
-renderSlideSet :: Typeable model
-               => Renderer (SlideCommand model) (AppState model (SlideCommand model))
+renderSlideSet :: (Typeable model, Typeable edom)
+               => Renderer (SlideCommand edom) (AppState model edom)
 renderSlideSet chan app@(AppState ss mdl) =
   let ws = workspace . current $ ss
       sr = screenRect . screenDetail . current $ ss
       recs = maybe [] (pureLayout (layout ws) sr) (stack ws)
       render' mdl' (s, r) =
-        let slideHTML = renderSlide s chan mdl'
+        let slideHTML = renderSlide s (contramap Passthrough chan) mdl'
             dims = styles r
         in editing slideHTML (A.style_ %= fmap (toJSString.(++dims).fromJSString))
       styles r = unwords [ "width:"
@@ -217,7 +194,7 @@ renderSlideSet chan app@(AppState ss mdl) =
              ]
   in el
 
-renderSlideControls :: Renderer (SlideCommand model) (AppState model (SlideCommand model))
+renderSlideControls :: Renderer (SlideCommand edom) (AppState model edom)
 renderSlideControls chan (_slides -> ss) =
   with aside_ (do
      A.classes .= ["controls"]
@@ -244,14 +221,19 @@ renderSlideControls chan (_slides -> ss) =
         A.classes %= ("enabled":)
         onClick $ contramap (const cmd) chan
 
-slideProcessor :: MonadIO m => Processor m (SlideCommand model) (SlideCommand model)
+slideProcessor :: (MonadIO m) => Processor m (SlideCommand Edom) (SlideCommand Edom)
 slideProcessor = Processor $ \cmd -> do
       liftIO $ print cmd
       yield cmd
 
+  
+data SModel = SModel deriving (Show, Typeable)
+
+data Edom = Edom deriving (Show, Typeable)
+
+
 slideComponent
-  :: Typeable model
-  => Component env (SlideCommand model)
-                   (AppState model (SlideCommand model))
-                   (SlideCommand model)
+  :: Component env (SlideCommand Edom)
+                   (AppState SModel Edom)
+                   (SlideCommand Edom)
 slideComponent = Component slideModel renderSlideSet slideProcessor

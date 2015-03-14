@@ -1,5 +1,5 @@
 { cabal, aeson, engineIo, engineIoSnap, snapServer, snapCors
-, socketIo, stm, text, yesodStatic
+, socketIo, stm, text, lens
 }:
 
 cabal.mkDerivation (self: {
@@ -7,8 +7,7 @@ cabal.mkDerivation (self: {
   version = "1.0.0";
   src = ./.;
   buildDepends = [
-    aeson engineIo engineIoSnap snapCors snapServer socketIo text
-    yesodStatic
+    aeson engineIo engineIoSnap snapCors snapServer socketIo text lens
   ];
   meta = {
     homepage = "http://github.com/ocharles/engine.io";

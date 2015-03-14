@@ -19,12 +19,13 @@ Library
   exposed-modules:  Present
                   , Present.Stack
                   , Present.Layout
+                  , Present.Types
   hs-source-dirs: src
   build-depends:
     aeson,
     base,
     containers,
---    lens,
+    lens,
     text
   if impl(ghcjs)
     build-depends:
@@ -50,6 +51,7 @@ Executable revealjs-server
       socket-io,
       stm,
       text,
+      lens,
       mtl,
       transformers
   hs-source-dirs:   src

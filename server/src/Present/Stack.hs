@@ -179,7 +179,7 @@ data Stack a = Stack { focus  :: !a        -- focused thing in this set
     deriving (Show, Read, Eq)
 
 -- | Virtual workspace indices
-type WorkspaceId = String
+type WorkspaceId = Int
 
 -- | Physical screen indices
 -- newtype ScreenId    = S Int deriving (Eq,Ord,Show,Read,Enum,Num,Integral,Real)

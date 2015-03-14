@@ -28,9 +28,7 @@ module Present.Layout (
     mirrorRect, splitVertically,
     splitHorizontally, splitHorizontallyBy, splitVerticallyBy,
 
-    Layout(..), LayoutClass(..), Rectangle(..),
-    Position,
-    Dimension,
+    Layout(..), LayoutClass(..),
     fromLayout,
     
     tile
@@ -41,13 +39,12 @@ module Present.Layout (
 import           Control.Arrow (second, (***))
 import           Control.Monad
 import           Data.Data
-import           Data.Int
 import           Data.Maybe    (fromMaybe)
-import           Data.Typeable
 import           Present.Stack (Stack (..), Workspace (..), WorkspaceId)
 import qualified Present.Stack as Stack
-
+import Present.Types
 ------------------------------------------------------------------------
+
 
 -- | Change the size of the master pane.
 data Resize     = Shrink | Expand   deriving Typeable
@@ -60,17 +57,6 @@ instance Message IncMasterN
 
 -- | Simple fullscreen mode. Renders the focused window fullscreen.
 data Full a = Full deriving (Show, Read)
-
-data Rectangle = Rectangle {
-        rect_x      :: !Position,
-        rect_y      :: !Position,
-        rect_width  :: !Dimension,
-        rect_height :: !Dimension
-        }
-        deriving (Eq, Read, Show, Typeable, Data)
-
-type Position = Int32
-type Dimension = Int32
 
 instance LayoutClass Full a
 

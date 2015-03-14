@@ -38,7 +38,7 @@ executable chat-client
                      , virtual-dom
                      , revealjs-server >= 1.0.0.3
   hs-source-dirs:      src
-  -- js-sources:          static/deps.js
+--  js-sources:          static/process-markdown.js
   other-modules:       Slide
   ghc-options:         -Wall
   default-language:    Haskell2010

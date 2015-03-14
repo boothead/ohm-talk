@@ -24,6 +24,10 @@ import qualified Network.SocketIO as SocketIO
 import qualified Snap.Core as Snap
 --------------------------------------------------------------------------------
 
+newtype Location = Location { unLoc :: (SectionName, SlideName) } deriving (Show, Generic)
+
+instance ToJSON Location
+
 newtype UsersConnected = UsersConnected { uConnected :: Set Uname } deriving Show
 newtype UsersTyping = UsersTyping { uTyping :: Set Uname } deriving Show
 

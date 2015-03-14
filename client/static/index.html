@@ -4,10 +4,13 @@
 	<head>
 		<meta charset="utf-8">
 
-		<title>reveal.js - The HTML Presentation Framework</title>
+		<title>oHm Om with Haskell in the middle</title>
 
-		<meta name="description" content="A framework for easily creating beautiful presentations using HTML">
-		<meta name="author" content="Hakim El Hattab">
+		<meta name="description" content="A Haskell front end
+                                                  framework featuring
+                                                  uni directional
+                                                  dataflow and virtual-dom">
+		<meta name="author" content="Ben Ford">
 
 		<meta name="apple-mobile-web-app-capable" content="yes" />
 		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -35,6 +38,37 @@
 	</head>
 
 	<body>
-	    <script src="exe/all.js"></script>
+          <!-- <div class="reveal" style="hidden: true;"> -->
+          <!--   <div class="slides"><section></section></div> -->
+          <!-- </div> -->
+
+	        <script src="exe/all.js"></script>
+                <script src="lib/js/head.min.js"></script>
+		<script src="js/reveal.js"></script>
+
+		<script>
+
+			// Full list of configuration options available at:
+			// https://github.com/hakimel/reveal.js#configuration
+			Reveal.initialize({
+				controls: true,
+				progress: true,
+				history: true,
+				center: true,
+
+				transition: 'slide', // none/fade/slide/convex/concave/zoom
+
+				// Optional reveal.js plugins
+				dependencies: [
+					{ src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+					{ src: 'plugin/markdown/marked.js'},
+					{ src: 'plugin/markdown/markdown.js'},
+					{ src: 'plugin/highlight/highlight.js', async: true, condition: function() { return !!document.querySelector( 'pre code' ); }, callback: function() { hljs.initHighlightingOnLoad(); } },
+					// { src: 'plugin/zoom-js/zoom.js', async: true },
+					// { src: 'plugin/notes/notes.js', async: true }
+				]
+			});
+
+		</script>
 	</body>
 </html>
