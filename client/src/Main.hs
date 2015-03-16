@@ -9,7 +9,6 @@ module Main where
 import qualified Data.Map      as Map
 import           Data.String   (fromString)
 import qualified Data.Text     as T
-import           Data.Typeable
 import           MVC
 import           Ohm.Component
 import           Ohm.HTML
@@ -17,6 +16,7 @@ import           Ohm.KeyMaster
 import           Prelude       hiding (div, filter, id, map, span)
 import           Present
 import           Present.Types
+import           Present.Model
 import           Slide
 
 
@@ -39,7 +39,7 @@ intro :: SlideSpace SModel Edom
 intro = Workspace "intro" (Layout $ SlideLayout 900 600 V) (differentiate introSection)
 
 
---problemSection :: [SC ()]
+problemSection :: [SC SModel Edom]
 problemSection = [Slide (T.pack $ show t) (slideText t) Nothing "" | t <- [(1::Int)..5]]
   where slideText i = Plain $ into h2_ [fromString $ "problem " ++ show i]
 

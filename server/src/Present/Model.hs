@@ -10,10 +10,10 @@ import Present.Layout
 
 
 --------------------------------------------------------------------------------
-type SlideState m = StackSet SectionName (Layout m) m ScreenId ScreenDetail
+type SlideSet m = StackSet SectionName (Layout m) m ScreenId ScreenDetail
 
 data AppState sc m = AppState {
-    _slides      :: SlideState sc
+    _slides      :: SlideSet sc
   , _application :: m
   } deriving Show
 
@@ -29,12 +29,6 @@ slideModel PrevSlide as = as & slides %~ focusUp
 slideModel NextSlide as = as & slides %~ focusDown
 slideModel (ChangeLayout o) as = as & slides %~ setLayout
   where
-    -- orientationLens = to (fromLayout . layout) . _Just
-    -- setLayout
-    --   :: Orientation
-    --   -> SlideState model edom
-      
-    --   -> SlideState model edom
     setLayout ss@(StackSet { current = c@(Screen { workspace = ws })}) =
       let l = case (fromLayout . layout $ ws) of
                 Just sl -> Layout $ sl { _orientation = o }

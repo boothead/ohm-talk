@@ -33,6 +33,7 @@ import           Ohm.Component              (Component (..), Processor (..))
 import           Ohm.HTML
 import           Present
 import           Present.Types
+import           Present.Model
 import qualified VirtualDom.HTML.Attributes as A
 import           VirtualDom.Prim
 
@@ -51,17 +52,12 @@ type SC model edom = Slide (SlideContent model edom)
 
 -- type instance HasLayout (Slide m) = (Layout (SC m)) 
 
-type SlideState m edom = StackSet SectionName (Layout (SC m edom)) (SC m edom) ScreenId ScreenDetail
+type SlideState m edom = SlideSet (SC m edom)
 type SlideSpace m edom = Workspace SectionName (Layout (SC m edom)) (SC m edom)
 
+type ClientAppState m edom = AppState (SC m edom) m
 
 --makePrisms ''SlideContent
-
--- | Physical screen indices
-newtype ScreenId    = S Int deriving (Eq,Ord,Show,Read,Enum,Num,Integral,Real)
-
--- | The 'Rectangle' with screen dimensions
-data ScreenDetail   = SD { screenRect :: !Rectangle } deriving (Eq,Show, Read)
 
 instance Show HTML where
   show _ = "<html>"
@@ -87,41 +83,13 @@ instance LayoutClass SlideLayout (SC m edom) where
           setPosition p (_i, sc) = (sc & position .~ Just p, rect)
             where rect = Rectangle 0 0 w h
 
-data AppState m edom = AppState {
-    _slides      :: SlideState m edom
-  , _application :: m
-  } deriving Show
-
-makeLenses ''AppState
 
 
-currentOreintation :: (Typeable a, Typeable e) => AppState a e -> Maybe Orientation
+currentOreintation :: (Typeable model, Typeable edom) 
+                   => ClientAppState model edom
+                   -> Maybe Orientation
 currentOreintation as = as ^? slides . to (fromLayout . layout . workspace . current) . _Just . orientation
 
---------------------------------------------------------------------------------
-
-slideModel
-  :: (Typeable model, Typeable edom)
-  => SlideCommand edom
-  -> AppState model edom
-  -> AppState model edom
-slideModel PrevSlide as = as & slides %~ focusUp
-slideModel NextSlide as = as & slides %~ focusDown
-slideModel (ChangeLayout o) as = as & slides %~ setLayout
-  where
-    -- orientationLens = to (fromLayout . layout) . _Just
-    -- setLayout
-    --   :: Orientation
-    --   -> SlideState model edom
-      
-    --   -> SlideState model edom
-    setLayout ss@(StackSet { current = c@(Screen { workspace = ws })}) =
-      let l = case (fromLayout . layout $ ws) of
-                Just sl -> Layout $ sl { _orientation = o }
-                Nothing -> layout ws
-      in ss {current = c { workspace = ws { layout = l } } }
-slideModel (ToSection s) ss = ss & slides %~ greedyView s
-slideModel _ ss = ss
 --------------------------------------------------------------------------------
 
 type SlideRenderer edom model = Renderer (SlideCommand edom) model
@@ -163,7 +131,7 @@ renderSlide s chan mdl =
   render' mdl' sc = renderSlideContent sc chan mdl'
 
 renderSlideSet :: (Typeable model, Typeable edom)
-               => Renderer (SlideCommand edom) (AppState model edom)
+               => Renderer (SlideCommand edom) (ClientAppState model edom)
 renderSlideSet chan app@(AppState ss mdl) =
   let ws = workspace . current $ ss
       sr = screenRect . screenDetail . current $ ss
@@ -194,7 +162,7 @@ renderSlideSet chan app@(AppState ss mdl) =
              ]
   in el
 
-renderSlideControls :: Renderer (SlideCommand edom) (AppState model edom)
+renderSlideControls :: Renderer (SlideCommand edom) (ClientAppState model edom)
 renderSlideControls chan (_slides -> ss) =
   with aside_ (do
      A.classes .= ["controls"]
@@ -234,6 +202,6 @@ data Edom = Edom deriving (Show, Typeable)
 
 slideComponent
   :: Component env (SlideCommand Edom)
-                   (AppState SModel Edom)
+                   (ClientAppState SModel Edom)
                    (SlideCommand Edom)
 slideComponent = Component slideModel renderSlideSet slideProcessor
