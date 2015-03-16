@@ -20,6 +20,7 @@ Library
                   , Present.Stack
                   , Present.Layout
                   , Present.Types
+                  , Present.Model
   hs-source-dirs: src
   build-depends:
     aeson,
