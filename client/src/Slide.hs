@@ -232,5 +232,8 @@ bgSlide bv name = Slide name BGOnly (bgImage .~ Just bv $ defaultSlideBG) Nothin
 plainSlide :: SlideName -> HTML -> SC model edom
 plainSlide name html = Slide name (Plain html) defaultSlideBG Nothing ""
 
-externalSlide :: SlideName -> -> SC model edom
+externalSlide :: SlideName -> Text -> SC model edom
 externalSlide name path = Slide name (MDFile path) defaultSlideBG Nothing ""
+
+inlineSlide :: SlideName -> Text -> SC model edom
+inlineSlide name md = Slide name (MD md) defaultSlideBG Nothing ""
