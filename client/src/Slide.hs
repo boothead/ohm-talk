@@ -10,8 +10,8 @@
 {-# LANGUAGE RankNTypes                 #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TemplateHaskell            #-}
-{-# LANGUAGE TypeSynonymInstances       #-}
 {-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE TypeSynonymInstances       #-}
 {-# LANGUAGE ViewPatterns               #-}
 
 module Slide where
@@ -22,9 +22,10 @@ import qualified Control.Lens               as Lens
 --import           Data.Aeson   (FromJSON, ToJSON)
 --import           Data.Aeson   as Aeson
 import           Control.Monad.State
-import           Data.Foldable              (traverse_)
+import           Data.Foldable              (for_, traverse_)
 import           Data.String                (fromString)
 import           Data.Text                  (Text)
+import qualified Data.Text                  as T
 import qualified Data.Text.Lens             as Lens
 import           Data.Typeable
 import           GHCJS.Foreign
@@ -32,37 +33,37 @@ import           MVC
 import           Ohm.Component              (Component (..), Processor (..))
 import           Ohm.HTML
 import           Present
-import           Present.Types
 import           Present.Model
+import           Present.Types
 import qualified VirtualDom.HTML.Attributes as A
 import           VirtualDom.Prim
 
 
+--------------------------------------------------------------------------------
 data SlideContent model edom =
     Plain HTML
   | MD Text
   | MDFile SectionName
+  | BGOnly
   | forall b. Pointer (Lens' model b) (Renderer edom b)
   deriving (Typeable)
 
-instance Show (SlideContent a e) where
-  show _ = "SC"
-
 type SC model edom = Slide (SlideContent model edom)
-
--- type instance HasLayout (Slide m) = (Layout (SC m)) 
-
 type SlideState m edom = SlideSet (SC m edom)
 type SlideSpace m edom = Workspace SectionName (Layout (SC m edom)) (SC m edom)
-
+type SlideRenderer edom model = Renderer (SlideCommand edom) model
 type ClientAppState m edom = AppState (SC m edom) m
 
---makePrisms ''SlideContent
+
+--------------------------------------------------------------------------------
+instance Show (SlideContent a e) where
+  show _ = "SC"
 
 instance Show HTML where
   show _ = "<html>"
 
 
+--------------------------------------------------------------------------------
 instance LayoutClass Layout (SC m edom) where
     pureLayout (Layout l) = pureLayout l
     runLayout (Workspace i (Layout l) ms) r = fmap (fmap Layout) `fmap` runLayout (Workspace i l ms) r
@@ -84,24 +85,14 @@ instance LayoutClass SlideLayout (SC m edom) where
             where rect = Rectangle 0 0 w h
 
 
-
-currentOreintation :: (Typeable model, Typeable edom) 
+--------------------------------------------------------------------------------
+currentOreintation :: (Typeable model, Typeable edom)
                    => ClientAppState model edom
                    -> Maybe Orientation
 currentOreintation as = as ^? slides . to (fromLayout . layout . workspace . current) . _Just . orientation
 
+
 --------------------------------------------------------------------------------
-
-type SlideRenderer edom model = Renderer (SlideCommand edom) model
-
-renderSlideContent :: SlideContent model edom -> Renderer edom model
-renderSlideContent (Plain h) _ _ = h
-renderSlideContent (MD md) _ _ = with script_
-                                   (A.type_ ?= "text/template")
-                                   [text md]
-renderSlideContent (MDFile _) _ _ = div_
-renderSlideContent (Pointer l r) chan (Lens.view l -> m) = r chan m
-
 modifySlide :: MonadState HTMLElement m => SlideContent model edom -> m ()
 modifySlide (MDFile sec) = do
   attributes.at "data-markdown" ?= toJSString sec
@@ -112,6 +103,25 @@ modifySlide (MDFile sec) = do
 modifySlide (MD _) = attributes.at "data-markdown" ?= ""
 modifySlide _ = return ()
 
+setSlideBackGround :: (Applicative m, MonadState HTMLElement m) => SlideBG -> m ()
+setSlideBackGround (SlideBG bg' trans' nPx') = do
+  for_ bg' $ \a ->
+    attributes.at "data-background" ?= toJSString a
+  for_ trans' $ \a ->
+    attributes.at "data-background-transition" ?= toJSString (toValue a)
+  for_ nPx' $ \a ->
+    attributes.at "data-background-size" ?= toJSString (T.pack $ (show a) ++ "px")
+
+--------------------------------------------------------------------------------
+renderSlideContent :: SlideContent model edom -> Renderer edom model
+renderSlideContent (Plain h) _ _ = h
+renderSlideContent (MD md) _ _ = with script_
+                                   (A.type_ ?= "text/template")
+                                   [text md]
+renderSlideContent (MDFile _) _ _ = div_
+renderSlideContent BGOnly _ _ = div_
+renderSlideContent (Pointer l r) chan (Lens.view l -> m) = r chan m
+
 renderSlide :: SC model edom -> Renderer edom model
 renderSlide s chan mdl =
   with section_ (do
@@ -120,7 +130,8 @@ renderSlide s chan mdl =
     A.style_ ?= "display: block; top: 10;"
     attributes . at "data-transition" ?= "slide"
     key .= slideKey
-    modifySlide (s ^. content))
+    modifySlide (s ^. content)
+    setSlideBackGround (s ^. background))
     (render' mdl <$> (s ^.. content))
   where
   slideKey = s ^. title.Lens.unpacked.to fromString
@@ -189,19 +200,37 @@ renderSlideControls chan (_slides -> ss) =
         A.classes %= ("enabled":)
         onClick $ contramap (const cmd) chan
 
+
+--------------------------------------------------------------------------------
+-- Processor
+
 slideProcessor :: (MonadIO m) => Processor m (SlideCommand Edom) (SlideCommand Edom)
 slideProcessor = Processor $ \cmd -> do
       liftIO $ print cmd
       yield cmd
 
-  
+
+--------------------------------------------------------------------------------
+-- Component
 data SModel = SModel deriving (Show, Typeable)
 
 data Edom = Edom deriving (Show, Typeable)
-
 
 slideComponent
   :: Component env (SlideCommand Edom)
                    (ClientAppState SModel Edom)
                    (SlideCommand Edom)
 slideComponent = Component slideModel renderSlideSet slideProcessor
+
+
+--------------------------------------------------------------------------------
+-- DSL
+
+bgSlide :: BackgroundValue -> SlideName -> SC model edom
+bgSlide bv name = Slide name BGOnly (bgImage .~ Just bv $ defaultSlideBG) Nothing ""
+
+plainSlide :: SlideName -> HTML -> SC model edom
+plainSlide name html = Slide name (Plain html) defaultSlideBG Nothing ""
+
+externalSlide :: SlideName -> -> SC model edom
+externalSlide name path = Slide name (MDFile path) defaultSlideBG Nothing ""

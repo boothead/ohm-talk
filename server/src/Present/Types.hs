@@ -1,22 +1,23 @@
-{-# LANGUAGE DeriveDataTypeable        #-}
-{-# LANGUAGE DeriveGeneric             #-}
-{-# LANGUAGE ExistentialQuantification #-}
-{-# LANGUAGE TemplateHaskell           #-}
-{-# LANGUAGE TypeFamilies              #-}
+{-# LANGUAGE DeriveDataTypeable         #-}
+{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE ExistentialQuantification  #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE TypeFamilies               #-}
 module Present.Types where
 
 import           Control.Lens
 import           Data.Data
 import           Data.Int
-import           Data.Text      (Text)
-import           GHC.Generics   (Generic)
+import           Data.Text    (Text)
+import           GHC.Generics (Generic)
 
 --------------------------------------------------------------------------------
 type Position = Int32
 type Dimension = Int32
 type SectionName = Text
 type SlideName = Text
+type BackgroundValue = Text
 
 
 -- | Physical screen indices
@@ -36,17 +37,32 @@ data Rectangle = Rectangle {
 
 data SlidePosition = Past | Present | Future deriving (Show, Generic)
 
+data SlideTransition = STSlide | STFade deriving (Show, Generic)
+
+toValue :: SlideTransition -> String
+toValue STSlide = "slide"
+toValue STFade = "fade"
+
+data SlideBG = SlideBG {
+    _bgImage      :: Maybe BackgroundValue
+  , _bgTransition :: Maybe SlideTransition
+  , _bgSize       :: Maybe Int
+  } deriving (Show, Generic)
+
+makeLenses ''SlideBG
+
+defaultSlideBG :: SlideBG
+defaultSlideBG = SlideBG Nothing Nothing Nothing
+
 data Slide a = Slide {
-    _title    :: SlideName
-  , _content  :: a
-  , _position :: Maybe SlidePosition
-  , _notes    :: Text
+    _title      :: SlideName
+  , _content    :: a
+  , _background :: SlideBG
+  , _position   :: Maybe SlidePosition
+  , _notes      :: Text
   } deriving (Show, Generic, Typeable)
 
 makeLenses ''Slide
-
-type family HasLayout l
-
 
 -- instance Show l => Show (HasLayout l) where
 --   show = ("HasLayout "++) . show

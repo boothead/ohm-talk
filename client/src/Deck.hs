@@ -1,9 +1,10 @@
-{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ViewPatterns      #-}
 module Deck (
     deck
 
   ) where
-  
+
 import qualified Data.Map      as Map
 import           Data.String   (fromString)
 import qualified Data.Text     as T
@@ -15,7 +16,8 @@ import           Slide
 
 introSection :: [SC SModel Edom ]
 introSection = mdExtSlide : mdSlide : [Slide (T.pack $ show t) (slideText t) Nothing "" | t <- [(1::Int)..5]]
-  where slideText i = Plain $ into h2_ [fromString $ "intro " ++ show i]
+  where slideText (("intro " ++) . show -> title) =
+          plainSlide title $ into h2_ [fromString title]
         mdExtSlide = Slide "Markdown" (MDFile "mdtest.md") Nothing "A Note"
         mdSlide = Slide "Inline" (MD md) Nothing "Inline note"
         md = T.pack $ unlines [
