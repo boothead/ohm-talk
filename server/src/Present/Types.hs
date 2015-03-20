@@ -37,6 +37,13 @@ data Rectangle = Rectangle {
 
 data SlidePosition = Past | Present | Future deriving (Show, Generic)
 
+positionToClasses :: Maybe SlidePosition -> [String]
+positionToClasses Nothing = []
+positionToClasses (Just Present) = ["present"]
+positionToClasses (Just Past) = ["past"]
+positionToClasses (Just Future) = ["future"]
+
+
 data SlideTransition = STSlide | STFade deriving (Show, Generic)
 
 toValue :: SlideTransition -> String

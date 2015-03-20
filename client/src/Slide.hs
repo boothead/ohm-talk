@@ -105,12 +105,18 @@ modifySlide _ = return ()
 
 setSlideBackGround :: (Applicative m, MonadState HTMLElement m) => SlideBG -> m ()
 setSlideBackGround (SlideBG bg' trans' nPx') = do
-  for_ bg' $ \a ->
+  for_ bg' $ \a -> do
     attributes.at "data-background" ?= toJSString a
+    A.style_ ?= (toJSString $ "display: block; background-image: url(" <> a <> ");")
   for_ trans' $ \a ->
     attributes.at "data-background-transition" ?= toJSString (toValue a)
   for_ nPx' $ \a ->
     attributes.at "data-background-size" ?= toJSString (T.pack $ (show a) ++ "px")
+
+setPositionClass :: MonadState HTMLElement m => SC model edom -> m ()
+setPositionClass s = A.classes %= (++) (toCls $ s ^. position)
+  where toCls = fmap toJSString . positionToClasses
+
 
 --------------------------------------------------------------------------------
 renderSlideContent :: SlideContent model edom -> Renderer edom model
@@ -125,21 +131,22 @@ renderSlideContent (Pointer l r) chan (Lens.view l -> m) = r chan m
 renderSlide :: SC model edom -> Renderer edom model
 renderSlide s chan mdl =
   with section_ (do
-    A.classes .= (toCls $ s ^. position)
+    setPositionClass s
     A.id_ ?= slideKey
     A.style_ ?= "display: block; top: 10;"
     attributes . at "data-transition" ?= "slide"
     key .= slideKey
-    modifySlide (s ^. content)
-    setSlideBackGround (s ^. background))
+    modifySlide (s ^. content))
     (render' mdl <$> (s ^.. content))
   where
   slideKey = s ^. title.Lens.unpacked.to fromString
-  toCls Nothing = []
-  toCls (Just Present) = ["present"]
-  toCls (Just Past) = ["past"]
-  toCls (Just Future) = ["future"]
   render' mdl' sc = renderSlideContent sc chan mdl'
+
+renderSlideBackground :: SC model edom -> HTML
+renderSlideBackground s = editing div_ $ do
+  A.classes .= ["slide-background"]
+  setPositionClass s
+  setSlideBackGround (s ^. background)
 
 renderSlideSet :: (Typeable model, Typeable edom)
                => Renderer (SlideCommand edom) (ClientAppState model edom)
@@ -147,8 +154,8 @@ renderSlideSet chan app@(AppState ss mdl) =
   let ws = workspace . current $ ss
       sr = screenRect . screenDetail . current $ ss
       recs = maybe [] (pureLayout (layout ws) sr) (stack ws)
-      render' mdl' (s, r) =
-        let slideHTML = renderSlide s (contramap Passthrough chan) mdl'
+      renderSlide' (s, r) =
+        let slideHTML = renderSlide s (contramap Passthrough chan) mdl
             dims = styles r
         in editing slideHTML (A.style_ %= fmap (toJSString.(++dims).fromJSString))
       styles r = unwords [ "width:"
@@ -156,7 +163,7 @@ renderSlideSet chan app@(AppState ss mdl) =
                          , "height:"
                          , (show . rect_height $ r) ++ "px;"
                          ]
-      slides' = render' mdl <$> recs
+      slides' = renderSlide' <$> recs
       sl = currentOreintation app
       children' = maybe slides' setOrientation sl
         where
@@ -164,11 +171,14 @@ renderSlideSet chan app@(AppState ss mdl) =
            [with section_ (A.classes .= ["stack", "present"])
               slides']
         setOrientation H = slides'
+      slideBackgrounds = renderSlideBackground . fst <$> recs
       el = with div_ (A.classes .= ["reveal"])
              [ with div_ (do
                  A.classes .= ["slides"]
                  A.style_ ?= (fromString $ "display: block;" ++ styles sr))
                  children'
+             , with div_ (A.classes .= ["backgrounds"])
+                 slideBackgrounds
              , renderSlideControls chan app
              ]
   in el

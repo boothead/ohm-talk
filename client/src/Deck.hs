@@ -16,8 +16,8 @@ import           Slide
 
 introSection :: [SC SModel Edom ]
 introSection = mdExtSlide : mdSlide : (slideText <$> [(1::Int)..5])
-  where slideText (("intro " ++) . show -> title) =
-           plainSlide (T.pack title) $ into h2_ [fromString title]
+  where slideText (("intro " ++) . show -> title') =
+           plainSlide (T.pack title') $ into h2_ [fromString title']
         mdExtSlide = externalSlide "Markdown" "mdtest.md"
         mdSlide = inlineSlide "Inline" md
         md = T.pack $ unlines [
@@ -32,8 +32,8 @@ intro = Workspace "intro" (Layout $ SlideLayout 900 600 V) (differentiate introS
 
 problemSection :: [SC SModel Edom]
 problemSection = bgSlide "./img/component.png" "Component" : (slideText <$> [(1::Int)..5])
-  where slideText (("intro " ++) . show -> title) =
-           plainSlide (T.pack title) $ into h2_ [fromString title]
+  where slideText (("intro " ++) . show -> title') =
+           plainSlide (T.pack title') $ into h2_ [fromString title']
 
 problem :: SlideSpace SModel Edom
 problem = Workspace "problem" (Layout $ SlideLayout 900 600 V) (differentiate problemSection)
