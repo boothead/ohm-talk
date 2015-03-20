@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import Present (server, ServerState (..), UsersConnected(..), UsersTyping(..))
+import Present.State (server, ServerState (..), UsersConnected(..), UsersTyping(..))
 import Control.Applicative
 
 import qualified Data.Set as Set
@@ -18,7 +18,7 @@ import Paths_revealjs_server (getDataDir)
 
 main :: IO ()
 main = do
-  state <- ServerState <$> STM.newTVarIO (UsersConnected Set.empty)
+  state <- ServerState <$> STM.newTVarIO (Nothing)
                        <*> STM.newTVarIO (UsersTyping Set.empty)
                        <*> STM.newTVarIO []
   socketIoHandler <- SocketIO.initialize EIOSnap.snapAPI (server state)

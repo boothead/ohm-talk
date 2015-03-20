@@ -23,38 +23,38 @@ Library
                   , Present.Model
   hs-source-dirs: src
   build-depends:
-    aeson,
-    base,
-    containers,
-    lens,
-    text
+                  aeson
+                , base
+                , containers
+                , lens
+                , text
   if impl(ghcjs)
     build-depends:
       ghcjs-base
   ghc-options: -Wall -O2 -threaded
   default-language: Haskell2010
 
-Executable revealjs-server
+Executable presentation-server
   default-language: Haskell2010
   if impl(ghcjs)
     buildable: False
   if !impl(ghcjs)
     build-depends:
-      aeson,
-      base,
-      containers,
-      revealjs-server,
-      engine-io,
-      engine-io-snap,
-      snap-core,
-      snap-cors,
-      snap-server,
-      socket-io,
-      stm,
-      text,
-      lens,
-      mtl,
-      transformers
+                              aeson
+                  , base
+                  , containers
+                  , engine-io
+                  , engine-io-snap
+                  , lens
+                  , mtl
+                  , revealjs-server
+                  , snap-core
+                  , snap-cors
+                  , snap-server
+                  , socket-io
+                  , stm
+                  , text
+                  , transformers
   hs-source-dirs:   src
   main-is:          MainSnap.hs
   other-modules:    Paths_revealjs_server
