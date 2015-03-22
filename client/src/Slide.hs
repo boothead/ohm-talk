@@ -29,8 +29,8 @@ import qualified Data.Text                  as T
 import qualified Data.Text.Lens             as Lens
 import           Data.Typeable
 import           GHCJS.Foreign
-import           MVC
-import           Ohm.Component              (Component (..), Processor (..))
+import           MVC hiding (handles)
+import           Ohm.Component              (Component (..), Processor (..), handles)
 import           Ohm.HTML
 import           Present
 import           Present.Model
@@ -51,9 +51,9 @@ data SlideContent model edom =
 type SC model edom = Slide (SlideContent model edom)
 type SlideState m edom = SlideSet (SC m edom)
 type SlideSpace m edom = Workspace SectionName (Layout (SC m edom)) (SC m edom)
-type SlideRenderer edom model = Renderer (SlideCommand edom) model
+type SlideRenderer edom model = Renderer SlideCommand model
 type ClientAppState m edom = AppState (SC m edom) m
-
+type Command e = Either e SlideCommand
 
 --------------------------------------------------------------------------------
 instance Show (SlideContent a e) where
@@ -149,13 +149,13 @@ renderSlideBackground s = editing div_ $ do
   setSlideBackGround (s ^. background)
 
 renderSlideSet :: (Typeable model, Typeable edom)
-               => Renderer (SlideCommand edom) (ClientAppState model edom)
+               => Renderer (Command edom) (ClientAppState model edom)
 renderSlideSet chan app@(AppState ss mdl) =
   let ws = workspace . current $ ss
       sr = screenRect . screenDetail . current $ ss
       recs = maybe [] (pureLayout (layout ws) sr) (stack ws)
       renderSlide' (s, r) =
-        let slideHTML = renderSlide s (contramap Passthrough chan) mdl
+        let slideHTML = renderSlide s (contramap Left chan) mdl
             dims = styles r
         in editing slideHTML (A.style_ %= fmap (toJSString.(++dims).fromJSString))
       styles r = unwords [ "width:"
@@ -179,11 +179,11 @@ renderSlideSet chan app@(AppState ss mdl) =
                  children'
              , with div_ (A.classes .= ["backgrounds"])
                  slideBackgrounds
-             , renderSlideControls chan app
+             , renderSlideControls (contramap Right chan) app
              ]
   in el
 
-renderSlideControls :: Renderer (SlideCommand edom) (ClientAppState model edom)
+renderSlideControls :: Renderer SlideCommand (ClientAppState model edom)
 renderSlideControls chan (_slides -> ss) =
   with aside_ (do
      A.classes .= ["controls"]
@@ -192,8 +192,8 @@ renderSlideControls chan (_slides -> ss) =
     [control dir cmd f | (dir, cmd, f) <- arrows]
   where
   ws = workspace . current $ ss
-  arrows = [ (("left" :: String), PrevSlide, up)
-           , ("right", NextSlide, down)
+  arrows = [ (("left" :: String), CPrevSlide, up)
+           , ("right", CNextSlide, down)
            -- , ("up", False)
            -- , ("down", False)
            ]
@@ -202,7 +202,7 @@ renderSlideControls chan (_slides -> ss) =
       A.classes .= [toJSString $ "navigate-" ++ dir]
       traverse_ (enabled cmd . f) $ stack ws)
       []
-  --enabled :: SlideCommand model -> [SC model (SlideCommand model)] -> State HTML ()
+  --enabled :: (Command edom) model -> [SC model ((Command edom) model)] -> State HTML ()
   enabled cmd slides' = do
     case slides' of
       [] -> onClick $ DOMEvent (const $ putStrLn "Click prevented")
@@ -214,10 +214,14 @@ renderSlideControls chan (_slides -> ss) =
 --------------------------------------------------------------------------------
 -- Processor
 
-slideProcessor :: (MonadIO m) => Processor m (SlideCommand Edom) (SlideCommand Edom)
+slideProcessor :: (MonadIO m) => Processor m SlideCommand (SlideEvent edom)
 slideProcessor = Processor $ \cmd -> do
-      liftIO $ print cmd
-      yield cmd
+  liftIO $ print cmd
+  case cmd of
+    CPrevSlide -> yield PrevSlide
+    CNextSlide -> yield NextSlide
+    CToSection s -> yield $ ToSection s
+    _ -> return ()
 
 
 --------------------------------------------------------------------------------
@@ -227,10 +231,12 @@ data SModel = SModel deriving (Show, Typeable)
 data Edom = Edom deriving (Show, Typeable)
 
 slideComponent
-  :: Component env (SlideCommand Edom)
-                   (ClientAppState SModel Edom)
-                   (SlideCommand Edom)
-slideComponent = Component slideModel renderSlideSet slideProcessor
+  :: Component env (SlideEvent Edom)
+                  (ClientAppState SModel Edom)
+                  (Command Edom)
+slideComponent = Component slideModel renderSlideSet processBoth
+  where
+    processBoth = handles _Right slideProcessor
 
 
 --------------------------------------------------------------------------------

@@ -5,7 +5,6 @@ module Deck (
 
   ) where
 
-import qualified Data.Map      as Map
 import           Data.String   (fromString)
 import qualified Data.Text     as T
 import           Ohm.HTML
@@ -39,5 +38,5 @@ problem :: SlideSpace SModel Edom
 problem = Workspace "problem" (Layout $ SlideLayout 900 600 V) (differentiate problemSection)
 
 deck :: SlideState SModel Edom
-deck = StackSet (scrn intro) [] [problem] Map.empty
+deck = StackSet (scrn intro) [] [problem]
   where scrn slides' = Screen slides' (S 0) (SD $ Rectangle 0 0 900 600)

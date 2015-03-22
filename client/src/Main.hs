@@ -38,5 +38,5 @@ main = do
     , ("2", ToSection "problem")
     ]
   modelSink <- runComponent (AppState deck SModel) () slideComponent
-  forkProcessor () $ for (fromInput keySource) (runProcessor $ domEventsProcessor slideComponent)
+  forkProcessor () $ for (fromInput keySource) (runProcessor idProcessor)
                >-> (toOutput modelSink)
