@@ -7,13 +7,15 @@
 module Present.Types where
 
 import           Control.Lens
-import GHC.Generics (Generic)
-import           Data.Aeson   (FromJSON, ToJSON)
+import           Data.Aeson      (FromJSON, ToJSON)
 import           Data.Data
 import           Data.Int
-
+-- -- import           Data.Map.Strict (Map)
+-- import           Data.Set        (Set)
+import           Data.Text       (Text)
+import           GHC.Generics    (Generic)
+-- import           Present.Stack
 -- import qualified Data.Set     as Set
-import           Data.Text    (Text)
 
 
 --------------------------------------------------------------------------------
@@ -26,10 +28,16 @@ type BackgroundValue = Text
 
 
 -- | Physical screen indices
-newtype ScreenId    = S Int deriving (Eq,Ord,Show,Read,Enum,Num,Integral,Real)
+newtype ScreenId    = S Int deriving (Eq,Ord,Show,Read,Enum,Num,Integral,Real, Generic)
+
+instance ToJSON ScreenId
+instance FromJSON ScreenId
 
 -- | The 'Rectangle' with screen dimensions
-data ScreenDetail   = SD { screenRect :: !Rectangle } deriving (Eq,Show, Read)
+data ScreenDetail   = SD { screenRect :: !Rectangle } deriving (Eq,Show, Read, Generic)
+
+instance ToJSON ScreenDetail
+instance FromJSON ScreenDetail
 
 --------------------------------------------------------------------------------
 data Rectangle = Rectangle {
@@ -38,7 +46,10 @@ data Rectangle = Rectangle {
   , rect_width  :: !Dimension
   , rect_height :: !Dimension
   }
-  deriving (Eq, Read, Show, Typeable, Data)
+  deriving (Eq, Read, Show, Typeable, Data, Generic)
+
+instance ToJSON Rectangle
+instance FromJSON Rectangle
 
 data SlidePosition = Past | Present | Future deriving (Show, Generic)
 
@@ -93,7 +104,7 @@ data SlideLayout a = SlideLayout {
 makeLenses ''SlideLayout
 
 --------------------------------------------------------------------------------
-data SlideCommand modelEvent =
+data SlideEvent modelEvent =
     NextSlide
   | PrevSlide
   | ToSlide SlideName
@@ -104,8 +115,20 @@ data SlideCommand modelEvent =
   | Passthrough modelEvent
   deriving (Generic, Typeable, Show)
 
-instance (ToJSON m) => ToJSON (SlideCommand m)
-instance (FromJSON m) => FromJSON (SlideCommand m)
+instance (ToJSON m) => ToJSON (SlideEvent m)
+instance (FromJSON m) => FromJSON (SlideEvent m)
 
+data SlideCommand =
+    CNextSlide
+  | CPrevSlide
+  | CToSlide SlideName
+  | CNextSection
+  | CPrevSection
+  | CToSection SectionName
+  | CChangeLayout Orientation
+  deriving (Generic, Typeable, Show)
+
+instance ToJSON SlideCommand
+instance FromJSON SlideCommand
 
 

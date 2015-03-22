@@ -1,5 +1,6 @@
 {-# LANGUAGE PatternGuards #-}
-
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveFunctor #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Present.Stack
@@ -43,7 +44,7 @@ module Present.Stack (
         insertUp, delete, delete', filter,
         -- * Setting the master window
         -- $settingMW
-        swapUp, swapDown, swapMaster, shiftMaster, modify, modify', float, sink, -- needed by users
+        swapUp, swapDown, swapMaster, shiftMaster, modify, modify',  -- needed by users
         -- * Composite operations
         -- $composite
         shift, shiftWin,
@@ -53,10 +54,11 @@ module Present.Stack (
     ) where
 
 import Prelude hiding (filter)
+import Data.Aeson (FromJSON, ToJSON)
 import Data.Maybe   (listToMaybe,isJust,fromMaybe)
 import qualified Data.List as L (deleteBy,find,splitAt,filter,nub)
 import Data.List ( (\\) )
-import qualified Data.Map  as M (Map,insert,delete,empty)
+import GHC.Generics
 
 -- $intro
 --
@@ -136,25 +138,33 @@ data StackSet i l a sid sd =
     StackSet { current  :: !(Screen i l a sid sd)    -- ^ currently focused workspace
              , visible  :: [Screen i l a sid sd]     -- ^ non-focused workspaces, visible in xinerama
              , hidden   :: [Workspace i l a]         -- ^ workspaces not visible anywhere
-             , floating :: M.Map a RationalRect      -- ^ floating windows
-             } deriving (Show, Read, Eq)
- 
+             } deriving (Show, Read, Eq, Generic)
+
+instance (ToJSON i, ToJSON l, ToJSON a, ToJSON sid, ToJSON sd) => ToJSON (StackSet i l a sid sd)
+instance (FromJSON i, FromJSON l, FromJSON a, FromJSON sid, FromJSON sd) => FromJSON (StackSet i l a sid sd)
 -- | Visible workspaces, and their Xinerama screens.
 data Screen i l a sid sd = Screen { workspace :: !(Workspace i l a)
                                   , screen :: !sid
                                   , screenDetail :: !sd }
-    deriving (Show, Read, Eq)
+    deriving (Show, Read, Eq, Generic)
 
+instance (ToJSON i, ToJSON l, ToJSON a, ToJSON sid, ToJSON sd) => ToJSON (Screen i l a sid sd)
+instance (FromJSON i, FromJSON l, FromJSON a, FromJSON sid, FromJSON sd) => FromJSON (Screen i l a sid sd)
 -- |
 -- A workspace is just a tag, a layout, and a stack.
 --
 data Workspace i l a = Workspace  { tag :: !i, layout :: l, stack :: Maybe (Stack a) }
-    deriving (Show, Read, Eq)
+    deriving (Show, Read, Eq, Generic)
+
+instance (ToJSON i, ToJSON l, ToJSON a) => ToJSON (Workspace i l a)
+instance (FromJSON i, FromJSON l, FromJSON a) => FromJSON (Workspace i l a)
 
 -- | A structure for window geometries
 data RationalRect = RationalRect Rational Rational Rational Rational
-    deriving (Show, Read, Eq)
+    deriving (Show, Read, Eq, Generic)
 
+instance ToJSON RationalRect
+instance FromJSON RationalRect
 -- |
 -- A stack is a cursor onto a window list.
 -- The data structure tracks focus by construction, and
@@ -176,7 +186,10 @@ data RationalRect = RationalRect Rational Rational Rational Rational
 data Stack a = Stack { focus  :: !a        -- focused thing in this set
                      , up     :: [a]       -- clowns to the left
                      , down   :: [a] }     -- jokers to the right
-    deriving (Show, Read, Eq)
+    deriving (Show, Read, Eq, Generic, Functor)
+
+instance (ToJSON a) => ToJSON (Stack a)
+instance (FromJSON a) => FromJSON (Stack a)
 
 -- | Virtual workspace indices
 type WorkspaceId = Int
@@ -204,7 +217,7 @@ abort x = error $ "xmonad: StackSet: " ++ x
 --
 new :: (Integral s) => l -> [i] -> [sd] -> StackSet i l a s sd
 new l wids m | not (null wids) && length m <= length wids && not (null m)
-  = StackSet cur visi unseen M.empty
+  = StackSet cur visi unseen
   where (seen,unseen) = L.splitAt (length m) $ map (\i -> Workspace i l Nothing) wids
         (cur:visi)    = [ Screen i s sd |  (i, s, sd) <- zip3 seen [0..] m ]
                 -- now zip up visibles with their screen id
@@ -426,7 +439,7 @@ mapWorkspace f s = s { current = updScr (current s)
 
 -- | Map a function on all the layouts in the 'StackSet'.
 mapLayout :: (l -> l') -> StackSet i l a s sd -> StackSet i l' a s sd
-mapLayout f (StackSet v vs hs m) = StackSet (fScreen v) (map fScreen vs) (map fWorkspace hs) m
+mapLayout f (StackSet v vs hs) = StackSet (fScreen v) (map fScreen vs) (map fWorkspace hs)
  where
     fScreen (Screen ws s sd) = Screen (fWorkspace ws) s sd
     fWorkspace (Workspace t l s) = Workspace t (f l) s
@@ -487,7 +500,7 @@ insertUp a s = if member a s then s else insert
 --   * otherwise, delete doesn't affect the master.
 --
 delete :: (Ord a, Eq s) => a -> StackSet i l a s sd -> StackSet i l a s sd
-delete w = sink w . delete' w
+delete = delete'
 
 -- | Only temporarily remove the window from the stack, thereby not destroying special
 -- information saved in the 'Stackset'
@@ -497,17 +510,6 @@ delete' w s = s { current = removeFromScreen        (current s)
                 , hidden  = map removeFromWorkspace (hidden  s) }
     where removeFromWorkspace ws = ws { stack = stack ws >>= filter (/=w) }
           removeFromScreen scr   = scr { workspace = removeFromWorkspace (workspace scr) }
-
-------------------------------------------------------------------------
-
--- | Given a window, and its preferred rectangle, set it as floating
--- A floating window should already be managed by the 'StackSet'.
-float :: Ord a => a -> RationalRect -> StackSet i l a s sd -> StackSet i l a s sd
-float w r s = s { floating = M.insert w r (floating s) }
-
--- | Clear the floating status of a window
-sink :: Ord a => a -> StackSet i l a s sd -> StackSet i l a s sd
-sink w s = s { floating = M.delete w (floating s) }
 
 ------------------------------------------------------------------------
 -- $settingMW
@@ -558,9 +560,9 @@ shift n s = maybe s (\w -> shiftWin n w s) (peek s)
 -- found in the stackSet, the original stackSet is returned.
 shiftWin :: (Ord a, Eq a, Eq s, Eq i) => i -> a -> StackSet i l a s sd -> StackSet i l a s sd
 shiftWin n w s = case findTag w s of
-                    Just from | n `tagMember` s && n /= from -> go from s
+                    Just from' | n `tagMember` s && n /= from' -> go from' s
                     _                                        -> s
- where go from = onWorkspace n (insertUp w) . onWorkspace from (delete' w)
+ where go from' = onWorkspace n (insertUp w) . onWorkspace from' (delete' w)
 
 onWorkspace :: (Eq i, Eq s) => i -> (StackSet i l a s sd -> StackSet i l a s sd)
             -> (StackSet i l a s sd -> StackSet i l a s sd)
