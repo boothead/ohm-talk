@@ -53,6 +53,9 @@ module Present.Stack (
         abort
     ) where
 
+import Control.Applicative
+import Control.Lens (Lens', Traversal, traverse)
+import Control.Lens.Operators
 import Prelude hiding (filter)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Maybe   (listToMaybe,isJust,fromMaybe)
@@ -140,6 +143,19 @@ data StackSet i l a sid sd =
              , hidden   :: [Workspace i l a]         -- ^ workspaces not visible anywhere
              } deriving (Show, Read, Eq, Generic)
 
+--currentLens :: Lens' (StackSet i l a sid sd) (Screen i l a sid sd)
+currentLens
+  :: Functor f =>
+     (Screen i l a sid sd -> f (Screen i l b sid sd))
+     -> StackSet i l a sid sd -> f (StackSet i l b sid sd)
+currentLens f ss@(StackSet c' _ _) = f c' <&> \c -> ss { current = c }
+
+--visibleLens :: Lens' (StackSet i l a sid sd) [Screen i l a sid sd]
+visibleLens f ss@(StackSet c v' h) = f v' <&> \v -> StackSet c v h
+
+--hiddenLens :: Lens' (StackSet i l a sid sd) [Workspace i l a]
+hiddenLens f ss@(StackSet _ _ h') = f h' <&> \h -> ss { hidden = h }
+
 instance (ToJSON i, ToJSON l, ToJSON a, ToJSON sid, ToJSON sd) => ToJSON (StackSet i l a sid sd)
 instance (FromJSON i, FromJSON l, FromJSON a, FromJSON sid, FromJSON sd) => FromJSON (StackSet i l a sid sd)
 -- | Visible workspaces, and their Xinerama screens.
@@ -148,6 +164,9 @@ data Screen i l a sid sd = Screen { workspace :: !(Workspace i l a)
                                   , screenDetail :: !sd }
     deriving (Show, Read, Eq, Generic)
 
+--workspaceLens :: Lens (Screen i l a sid sd) (Screen i l b sid sd) (Workspace i l a) (Workspace i l b)
+workspaceLens f s@(Screen ws' _ _ ) = f ws' <&> (\ws -> s { workspace = ws})
+
 instance (ToJSON i, ToJSON l, ToJSON a, ToJSON sid, ToJSON sd) => ToJSON (Screen i l a sid sd)
 instance (FromJSON i, FromJSON l, FromJSON a, FromJSON sid, FromJSON sd) => FromJSON (Screen i l a sid sd)
 -- |
@@ -155,6 +174,9 @@ instance (FromJSON i, FromJSON l, FromJSON a, FromJSON sid, FromJSON sd) => From
 --
 data Workspace i l a = Workspace  { tag :: !i, layout :: l, stack :: Maybe (Stack a) }
     deriving (Show, Read, Eq, Generic)
+
+--stackLens :: Lens' (Workspace i l a) (Maybe (Stack a))
+stackLens f w@(Workspace _ _ s') = f s' <&> \s -> w { stack = s }
 
 instance (ToJSON i, ToJSON l, ToJSON a) => ToJSON (Workspace i l a)
 instance (FromJSON i, FromJSON l, FromJSON a) => FromJSON (Workspace i l a)
@@ -187,6 +209,9 @@ data Stack a = Stack { focus  :: !a        -- focused thing in this set
                      , up     :: [a]       -- clowns to the left
                      , down   :: [a] }     -- jokers to the right
     deriving (Show, Read, Eq, Generic, Functor)
+
+stackItems :: Traversal (Maybe (Stack a)) (Maybe (Stack b)) a b
+stackItems f s = differentiate <$> (traverse f (integrate' s))
 
 instance (ToJSON a) => ToJSON (Stack a)
 instance (FromJSON a) => FromJSON (Stack a)
@@ -271,13 +296,9 @@ greedyView w ws
      | otherwise = ws
    where wTag = (w == ) . tag
 
-over :: (a -> b) -> StackSet i l a s sd -> StackSet i l b s sd
-over f (StackSet c@(Screen ws _ _) v h) = StackSet newC newV newH
-  where
-    newC = c { workspace = changeWS ws}
-    newV = fmap _ v
-    newH = fmap changeWS h
-    changeWS ws =  _
+--over :: (a -> b) -> StackSet i l a s sd -> StackSet i l b s sd
+over f ss = ss & currentLens . workspaceLens . stackLens . stackItems %~ f
+
 -- ---------------------------------------------------------------------
 -- $xinerama
 
