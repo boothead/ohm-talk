@@ -22,15 +22,18 @@ import qualified Control.Lens               as Lens
 --import           Data.Aeson   (FromJSON, ToJSON)
 --import           Data.Aeson   as Aeson
 import           Control.Monad.State
+import           Data.Aeson                 (FromJSON)
 import           Data.Foldable              (for_, traverse_)
 import           Data.String                (fromString)
 import           Data.Text                  (Text)
 import qualified Data.Text                  as T
 import qualified Data.Text.Lens             as Lens
 import           Data.Typeable
+import           GHC.Generics
 import           GHCJS.Foreign
-import           MVC hiding (handles)
-import           Ohm.Component              (Component (..), Processor (..), handles)
+import           MVC                        hiding (handles)
+import           Ohm.Component              (Component (..), Processor (..),
+                                             handles)
 import           Ohm.HTML
 import           Present
 import           Present.Model
@@ -89,7 +92,7 @@ instance LayoutClass SlideLayout (SC m edom) where
 currentOreintation :: (Typeable model, Typeable edom)
                    => ClientAppState model edom
                    -> Maybe Orientation
-currentOreintation as = as ^? slides . to (fromLayout . layout . workspace . current) . _Just . orientation
+currentOreintation as = as ^? slides . Lens.to (fromLayout . layout . workspace . current) . _Just . orientation
 
 
 --------------------------------------------------------------------------------
@@ -139,7 +142,7 @@ renderSlide s chan mdl =
     modifySlide (s ^. content))
     (render' mdl <$> (s ^.. content))
   where
-  slideKey = s ^. title.Lens.unpacked.to fromString
+  slideKey = s ^. title . Lens.unpacked . Lens.to fromString
   render' mdl' sc = renderSlideContent sc chan mdl'
 
 renderSlideBackground :: SC model edom -> HTML
@@ -226,14 +229,17 @@ slideProcessor = Processor $ \cmd -> do
 
 --------------------------------------------------------------------------------
 -- Component
-data SModel = SModel deriving (Show, Typeable)
+data SModel = SModel deriving (Show, Typeable, Generic)
 
-data Edom = Edom deriving (Show, Typeable)
+data Edom = Edom deriving (Show, Typeable, Generic)
+
+instance FromJSON Edom
 
 slideComponent
-  :: Component env (SlideEvent Edom)
-                  (ClientAppState SModel Edom)
-                  (Command Edom)
+  :: (Typeable model, Typeable edom)
+  => Component env (SlideEvent edom)
+                  (ClientAppState model edom)
+                  (Command edom)
 slideComponent = Component slideModel renderSlideSet processBoth
   where
     processBoth = handles _Right slideProcessor

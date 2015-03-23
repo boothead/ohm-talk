@@ -131,4 +131,9 @@ data SlideCommand =
 instance ToJSON SlideCommand
 instance FromJSON SlideCommand
 
+cmdToEvent :: SlideCommand -> Maybe (SlideEvent ())
+cmdToEvent CNextSlide = Just NextSlide
+cmdToEvent CPrevSlide = Just PrevSlide
+cmdToEvent (CToSection s) = Just (ToSection s)
+cmdToEvent _ = Nothing
 

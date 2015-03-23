@@ -6,7 +6,7 @@ import Control.Lens
 import Control.Monad.STM
 import Control.Monad.Trans.Reader
 import Data.Aeson (ToJSON)
-import qualified Data.Set as S
+import qualified Data.Set as Set
 import Pipes
 import qualified Pipes.Concurrent as PC
 --import Prelude hiding ((.))
@@ -21,6 +21,7 @@ import Ohm.SocketIO ( SocketIO, socketIONew, socketIOWaitForConnection, socketIO
 import Slide
 import Deck
 import Present.Model
+import Present.Stack
 import Present.Types
 
 data Env = Env {
@@ -46,26 +47,24 @@ wsEmit_ chan = do
 --------------------------------------------------------------------------------
 -- Render
 
-renderPresenter :: Renderer SlideCommand (ClientAppState () ())
+renderPresenter :: Renderer SlideCommand (ClientAppState SModel Edom)
 renderPresenter = undefined
 
 
 --------------------------------------------------------------------------------
 -- Processor
 
-slideProcessor :: (MonadIO m) => Processor m SlideCommand (SlideEvent edom)
-slideProcessor = Processor $ \cmd -> do
+presenterProcessor :: Processor ProcessorMonad SlideCommand (SlideEvent Edom)
+presenterProcessor = Processor $ \cmd -> do
   liftIO $ print cmd
-  case cmd of
-    CPrevSlide -> yield PrevSlide
-    CNextSlide -> yield NextSlide
-    CToSection s -> yield $ ToSection s
-    _ -> return ()
-
--- slidePresenter :: Component Env (SlideEvent ())
---                                (ClientAppState () ())
---                                (Command ())
-slidePresenter = undefined
+  lift $ wsEmit "controller command" cmd
+ 
+slidePresenter :: Component Env (SlideEvent Edom)
+                               (ClientAppState SModel Edom)
+                                SlideCommand
+slidePresenter = Component slideModel renderPresenter p
+  where
+    p = presenterProcessor
 
 
 --------------------------------------------------------------------------------
@@ -77,16 +76,9 @@ main = do
   putStrLn "socket"
   socketIOOpen s
   socketIOWaitForConnection s
-  modelEvents <- runComponent (AppState deck ()) (Env s) slidePresenter
-  sioSend s "controller connect" $ CreateSession  ("LHUG", _ deck)
-  -- sioSub s "new message"         $ sendToModel modelEvents (Chat . NewChatMessage)               
-  -- sioSub s "user joined"         $ sendToModel modelEvents (Chat . NewUser)                    
-  -- sioSub s "user left"           $ sendToModel modelEvents (Chat . UserLeft)                   
-  -- --sioSub s "login"             $ sendToModel modelEvents (Chat . NewUser)                  
-  -- -- sioSub s "typing"              $ sendToModel modelEvents (Chat . SomeoneTyping)              
-  -- -- sioSub s "stop typing"         $ sendToModel modelEvents (Chat . StopTyping)                 
-  -- sioSub s "currently connected" $ sendToModel modelEvents (Chat . CurrentlyConnected) 
-  -- sioSub s "currently typing"    $ sendToModel modelEvents (Chat . CurrentlyTyping) 
-  -- sioSub s "state"               $ sendToModel modelEvents (Chat . LoadState)
+  modelEvents <- runComponent (AppState deck SModel) (Env s) slidePresenter
+  sioSend s "controller connect" $ CreateSession  "LHUG"
+  sioSub s "slide command" $ sendToModel modelEvents
+
   where
-    sendToModel evts f = void . atomically . PC.send evts . f
+    sendToModel evts = void . atomically . PC.send evts

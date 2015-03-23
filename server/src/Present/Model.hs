@@ -52,7 +52,7 @@ type Uname = Text
 type LayoutDetails = Text
 type ConnectedState = StackSet SectionName LayoutDetails UsersConnected ScreenId ScreenDetail
 type SessionName = Text
-type SessionMap = Map SessionName ConnectedState
+type SessionMap = Map SessionName UsersConnected
 
 newtype UsersConnected = UsersConnected { uConnected :: Set Uname } deriving (Show, Generic)
 
@@ -78,7 +78,7 @@ instance FromJSON SlideStateCommand
 --------------------------------------------------------------------------------
 
 newtype CreateSession = CreateSession {
-  session :: (SessionName, ConnectedState)
+  session :: SessionName
   } deriving (Show, Generic)
 
 instance ToJSON CreateSession
