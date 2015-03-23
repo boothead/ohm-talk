@@ -271,6 +271,13 @@ greedyView w ws
      | otherwise = ws
    where wTag = (w == ) . tag
 
+over :: (a -> b) -> StackSet i l a s sd -> StackSet i l b s sd
+over f (StackSet c@(Screen ws _ _) v h) = StackSet newC newV newH
+  where
+    newC = c { workspace = changeWS ws}
+    newV = fmap _ v
+    newH = fmap changeWS h
+    changeWS ws =  _
 -- ---------------------------------------------------------------------
 -- $xinerama
 
