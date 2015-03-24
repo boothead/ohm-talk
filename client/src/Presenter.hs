@@ -13,11 +13,14 @@ import qualified Pipes.Concurrent as PC
 import Control.Applicative
 import Data.Foldable (traverse_)
 import Data.Monoid ((<>))
+import qualified Data.Text as T
 import Ohm.Component
 import Ohm.HTML
 import Ohm.SocketIO ( SocketIO, socketIONew, socketIOWaitForConnection, socketIOOpen
                 , sioSend, sioSend_, sioSub
                 )
+import VirtualDom.Prim
+import qualified VirtualDom.HTML.Attributes as A
 import Slide
 import Deck
 import Present.Model
@@ -48,8 +51,19 @@ wsEmit_ chan = do
 -- Render
 
 renderPresenter :: Renderer SlideCommand (ClientAppState SModel Edom)
-renderPresenter = undefined
-
+renderPresenter c@(DOMEvent chan) (AppState ss _)=
+  container [
+      row [with div_ (A.classes .= ["btn-group"])
+            (btn . mkToSection <$> workspaceTags ss)
+          ]
+    , row (col6 . (\a -> [a]) . btn
+             <$> ([("prev", CPrevSlide), ("next", CNextSlide)] :: [(T.Text, SlideCommand)]))
+    ]
+  where
+    mkToSection sname = (sname, CToSection sname)
+    btn (txt, cmd) = mkButton sendMessage (text txt) ["btn-primary", "btn-large"]
+      where
+        sendMessage = const $ chan cmd
 
 --------------------------------------------------------------------------------
 -- Processor
@@ -72,13 +86,17 @@ slidePresenter = Component slideModel renderPresenter p
 
 main :: IO ()
 main = do
+  _ <- initDomDelegator
   s <- socketIONew "http://localhost:8000"
   putStrLn "socket"
   socketIOOpen s
   socketIOWaitForConnection s
   modelEvents <- runComponent (AppState deck SModel) (Env s) slidePresenter
-  sioSend s "controller connect" $ CreateSession  "LHUG"
+  sioSub s "sessions" $ \keys ->
+    liftIO $ putStrLn . T.unpack . T.unlines $ Set.toList keys
+  sioSend s "controller connect" $ CreateSession "LHUG"
   sioSub s "slide command" $ sendToModel modelEvents
-
   where
-    sendToModel evts = void . atomically . PC.send evts
+    sendToModel evts a = do
+      print ("slide command", a)
+      void . atomically $ PC.send evts a

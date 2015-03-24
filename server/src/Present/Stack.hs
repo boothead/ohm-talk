@@ -36,7 +36,7 @@ module Present.Stack (
         screens, workspaces, allWindows, currentTag,
         -- *  Operations on the current stack
         -- $stackOperations
-        peek, index, integrate, integrate', differentiate, overStackSet,
+        peek, index, integrate, integrate', differentiate, overStackSet, workspaceTags,
         focusUp, focusDown, focusUp', focusDown', focusMaster, focusWindow,
         tagMember, renameTag, ensureTags, member, findTag, mapWorkspace, mapLayout,
         -- * Modifying the stackset
@@ -152,6 +152,10 @@ visibleLens f ss@(StackSet _ v' _) = f v' <&> \v -> ss { visible = v }
 
 hiddenLens :: Lens' (StackSet i l a sid sd) [Workspace i l a]
 hiddenLens f ss@(StackSet _ _ h') = f h' <&> \h -> ss { hidden = h }
+
+workspaceTags :: StackSet i l a sid sd -> [i]
+workspaceTags ss = tag <$> (ss ^. currentLens . workspaceLens)
+                           : (ss ^.. hiddenLens . Lens.traversed)
 
 instance (ToJSON i, ToJSON l, ToJSON a, ToJSON sid, ToJSON sd) => ToJSON (StackSet i l a sid sd)
 instance (FromJSON i, FromJSON l, FromJSON a, FromJSON sid, FromJSON sd) => FromJSON (StackSet i l a sid sd)

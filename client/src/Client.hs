@@ -3,11 +3,17 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE OverloadedStrings          #-}
-
+{-# LANGUAGE ViewPatterns #-}
 module Main where
 
-
+import Data.Foldable
+import qualified Data.Set as Set
+import qualified Data.Text as T
+import Control.Lens
 import           MVC
+import Ohm.SocketIO ( SocketIO, socketIONew, socketIOWaitForConnection, socketIOOpen
+                , sioSend, sioSend_, sioSub
+                )
 import           Ohm.Component
 import           Ohm.HTML
 import           Ohm.KeyMaster
@@ -15,6 +21,7 @@ import           Prelude       hiding (div, filter, id, map, span)
 import           Present.Model
 import           Present.Types
 
+import qualified Pipes.Concurrent as PC
 import           Deck
 import           Slide
 
@@ -37,6 +44,24 @@ main = do
     , ("1", ToSection "intro")
     , ("2", ToSection "problem")
     ]
+  s <- socketIONew "http://localhost:8000"
+  putStrLn "socket"
+  socketIOOpen s
+  socketIOWaitForConnection s
+
   modelSink <- runComponent (AppState deck SModel) () slideComponent
+
+  sioSub s "sessions" $ \(Set.toList -> keys) -> do
+    liftIO $ putStrLn . T.unpack $ T.unlines keys
+    forM_ (keys ^? _head) $ \k ->
+      sioSend s "client connect" $ CreateSession "LHUG"
+
+  sioSub s "slide command" $ sendToModel modelSink
+
   forkProcessor () $ for (fromInput keySource) (runProcessor idProcessor)
                >-> (toOutput modelSink)
+
+  where
+    sendToModel evts a = do
+      print ("slide command", a)
+      void . atomically $ PC.send evts a

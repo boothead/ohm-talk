@@ -64,14 +64,18 @@ server state = do
   -- let forCurrentSession m = forSessionName $ \sn -> withSession state sn m
 
   SocketIO.on "controller connect" $ \(CreateSession sn) -> do
+    liftIO $ print ("CONTROLLER CONNECT", sn)
     keys <- liftIO $
       STM.atomically $ do
         STM.modifyTVar' (state ^. slideSessions) $ Map.insertWith const sn (UsersConnected Set.empty)
         STM.putTMVar sessionNameMVar sn
         STM.readTVar (state ^. slideSessions)
+    liftIO $ putStrLn "BCASTING"
     SocketIO.broadcast "sessions" keys
-
+    liftIO $ putStrLn "BCAST DONE"
+    
   SocketIO.on "controller command" $ \cc -> do
+    liftIO $ print ("CONTROLLER COOMMAND", cc)
     let e = cmdToEvent cc
     -- liftIO $ STM.atomically $ do
     --   sn <- STM.tryReadTMVar sessionNameMVar
