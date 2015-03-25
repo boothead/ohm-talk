@@ -21,6 +21,7 @@ import           Control.Lens               hiding (aside)
 import qualified Control.Lens               as Lens
 --import           Data.Aeson   (FromJSON, ToJSON)
 --import           Data.Aeson   as Aeson
+import Control.Monad (guard)
 import           Control.Monad.State
 import           Data.Aeson                 (FromJSON)
 import           Data.Foldable              (for_, traverse_)
@@ -106,15 +107,21 @@ modifySlide (MDFile sec) = do
 modifySlide (MD _) = attributes.at "data-markdown" ?= ""
 modifySlide _ = return ()
 
-setSlideBackGround :: (Applicative m, MonadState HTMLElement m) => SlideBG -> m ()
-setSlideBackGround (SlideBG bg' trans' nPx') = do
+setSlideBackGround :: (Applicative m, MonadState HTMLElement m) => SC model edom -> m ()
+setSlideBackGround s = do
   for_ bg' $ \a -> do
     attributes.at "data-background" ?= toJSString a
-    A.style_ ?= (toJSString $ "display: block; background-image: url(" <> a <> ");")
+    A.style_ ?= (toJSString $ "background-image: url(" <> a <> ");")
   for_ trans' $ \a ->
     attributes.at "data-background-transition" ?= toJSString (toValue a)
   for_ nPx' $ \a ->
-    attributes.at "data-background-size" ?= toJSString (T.pack $ (show a) ++ "px")
+    attributes.at "data-background-size" ?= toJSString (T.pack $ show a ++ "px")
+  for_ (s ^. position) $ \p ->
+    case p of
+      Present -> A.style_ %= fmap (toJSString.(("display: block;"::String)++).fromJSString)
+      _ -> return ()
+  where
+    (SlideBG bg' trans' nPx') = s ^. background
 
 setPositionClass :: MonadState HTMLElement m => SC model edom -> m ()
 setPositionClass s = A.classes %= (++) (toCls $ s ^. position)
@@ -136,7 +143,7 @@ renderSlide s chan mdl =
   with section_ (do
     setPositionClass s
     A.id_ ?= slideKey
-    A.style_ ?= "display: block; top: 10;"
+    A.style_ ?= "display: block;"
     attributes . at "data-transition" ?= "slide"
     key .= slideKey
     modifySlide (s ^. content))
@@ -149,7 +156,7 @@ renderSlideBackground :: SC model edom -> HTML
 renderSlideBackground s = editing div_ $ do
   A.classes .= ["slide-background"]
   setPositionClass s
-  setSlideBackGround (s ^. background)
+  setSlideBackGround s
 
 renderSlideSet :: (Typeable model, Typeable edom)
                => Renderer (Command edom) (ClientAppState model edom)
@@ -248,6 +255,11 @@ slideComponent = Component slideModel renderSlideSet processBoth
 --------------------------------------------------------------------------------
 -- DSL
 
+toSection
+  :: (Typeable model, Typeable edom)
+  => SectionName -> Orientation -> [SC model edom] -> SlideSpace model edom
+toSection n o = Workspace n (Layout $ SlideLayout 900 600 o) . differentiate
+
 bgSlide :: BackgroundValue -> SlideName -> SC model edom
 bgSlide bv name = Slide name BGOnly (bgImage .~ Just bv $ defaultSlideBG) Nothing ""
 
@@ -259,3 +271,11 @@ externalSlide name path = Slide name (MDFile path) defaultSlideBG Nothing ""
 
 inlineSlide :: SlideName -> Text -> SC model edom
 inlineSlide name md = Slide name (MD md) defaultSlideBG Nothing ""
+
+(<?) :: SC model edom -> Text -> SC model edom
+s <? n = s & notes .~ n
+
+titleSlide :: Text -> BackgroundValue -> SlideName -> SC model edom
+titleSlide t bgv sn = bgSlide bgv sn & content .~ Plain title'
+  where
+    title' = into h2_ [text t]

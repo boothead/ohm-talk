@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="1024px"
+   height="768px"
+   id="svg3255"
+   version="1.1"
+   inkscape:version="0.48.5 r10040"
+   inkscape:export-filename="/home/ben/dev/ghcjs/ohm-talk/client/static/img/intro-title.png"
+   inkscape:export-xdpi="115.66406"
+   inkscape:export-ydpi="115.66406"
+   sodipodi:docname="New document 7">
+  <defs
+     id="defs3257" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#073642"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="1"
+     inkscape:pageshadow="2"
+     inkscape:zoom="1"
+     inkscape:cx="609.75295"
+     inkscape:cy="378.65818"
+     inkscape:current-layer="layer1"
+     inkscape:document-units="px"
+     showgrid="false"
+     inkscape:window-width="1918"
+     inkscape:window-height="1078"
+     inkscape:window-x="1920"
+     inkscape:window-y="0"
+     inkscape:window-maximized="0" />
+  <metadata
+     id="metadata3260">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     id="layer1"
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer">
+    <text
+       xml:space="preserve"
+       style="font-size:40px;font-style:normal;font-variant:normal;font-weight:500;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#fdf6e3;fill-opacity:1;stroke:none;font-family:Ubuntu;-inkscape-font-specification:Ubuntu Medium"
+       x="352.71576"
+       y="335.25064"
+       id="text3263"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         id="tspan3265"
+         x="352.71576"
+         y="335.25064"
+         style="font-size:144px;font-style:normal;font-variant:normal;font-weight:500;font-stretch:normal;fill:#cb4b16;fill-opacity:1;font-family:Ubuntu;-inkscape-font-specification:Ubuntu Medium">Ohm</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:40px;font-style:normal;font-variant:normal;font-weight:500;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#fdf6e3;fill-opacity:1;stroke:none;font-family:Ubuntu;-inkscape-font-specification:Ubuntu Medium"
+       x="238.36507"
+       y="461.26593"
+       id="text3267"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         id="tspan3269"
+         x="238.36507"
+         y="461.26593"
+         style="font-size:72px;font-style:normal;font-variant:normal;font-weight:500;font-stretch:normal;fill:#b58900;fill-opacity:1;font-family:Ubuntu;-inkscape-font-specification:Ubuntu Medium">Om with Haskell</tspan></text>
+    <flowRoot
+       xml:space="preserve"
+       id="flowRoot4039"
+       style="fill:black;stroke:none;stroke-opacity:1;stroke-width:1px;stroke-linejoin:miter;stroke-linecap:butt;fill-opacity:1;font-family:Sans;font-style:normal;font-weight:normal;font-size:40px;line-height:125%;letter-spacing:0px;word-spacing:0px"><flowRegion
+         id="flowRegion4041"><rect
+           id="rect4043"
+           width="692.96466"
+           height="376.18082"
+           x="144.24979"
+           y="230.59885" /></flowRegion><flowPara
+         id="flowPara4045"></flowPara></flowRoot>    <text
+       xml:space="preserve"
+       style="font-size:40px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="301.82422"
+       y="599"
+       id="text4047"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         id="tspan4049"
+         x="301.82422"
+         y="599"
+         style="fill:#268bd2;fill-opacity:1"><tspan
+   style="fill:#93a1a1;fill-opacity:1"
+   id="tspan4051">Ben Ford</tspan> @boothead</tspan></text>
+  </g>
+</svg>

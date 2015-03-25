@@ -13,30 +13,50 @@ import           Present.Types
 import           Slide
 
 
-introSection :: [SC SModel Edom ]
-introSection = mdExtSlide : mdSlide : (slideText <$> [(1::Int)..5])
-  where slideText (("intro " ++) . show -> title') =
-           plainSlide (T.pack title') $ into h2_ [fromString title']
-        mdExtSlide = externalSlide "Markdown" "mdtest.md"
-        mdSlide = inlineSlide "Inline" md
-        md = T.pack $ unlines [
-                 "# Inline test"
-               , ""
-               , "Blah"
-               ]
+intros = [
+    bgSlide "img/intro-title.png" "Welcome"
+  , externalSlide "fynder" "md/fynder.md"
+  , externalSlide "oo-frameworks" "md/oo-frameworks.md"
+  , bgSlide "img/wat-dog.jpg" "wat dog"
+  , externalSlide "angular" "md/angular.md"
+  , bgSlide "img/angular.png" "angular"
+  , bgSlide "img/window-lick.jpg" "javascript"
+  , externalSlide "om" "md/om.md"
+  ]
+
+ohms = [
+    externalSlide "ohm" "md/ohm.md"
+  , externalSlide "ohm-vdom" "md/ohm-vdom.md"
+  , externalSlide "ohm-composition" "md/ohm-composition.md"
+  , externalSlide "ohm-dataflow" "md/ohm-dataflow.md"
+  , bgSlide "img/component.png" "oHm component"
+  ]
+
+concepts = [
+    externalSlide "MVC" "md/MVC.md"
+  , externalSlide "Model" "md/Model.md"
+  , externalSlide "Renderer" "md/Renderer.md"
+  , externalSlide "Commands" "md/Commands.md"
+  , externalSlide "Processor" "md/Processor.md"
+  , externalSlide "ProcessorOps" "md/ProcessorOps.md"
+  ]
+
+alternatives = [
+    externalSlide "Francium" "md/Francium.md"
+  , externalSlide "Lei" "md/Lei.md"
+  , externalSlide "ReactHaskell" "md/ReactHaskell.md"
+  ]
 
 intro :: SlideSpace SModel Edom
-intro = Workspace "intro" (Layout $ SlideLayout 900 600 V) (differentiate introSection)
-
-
-problemSection :: [SC SModel Edom]
-problemSection = bgSlide "./img/component.png" "Component" : (slideText <$> [(1::Int)..5])
-  where slideText (("intro " ++) . show -> title') =
-           plainSlide (T.pack title') $ into h2_ [fromString title']
-
-problem :: SlideSpace SModel Edom
-problem = Workspace "problem" (Layout $ SlideLayout 900 600 V) (differentiate problemSection)
+intro = toSection "intro" H intros
 
 deck :: SlideState SModel Edom
-deck = StackSet (scrn intro) [] [problem]
-  where scrn slides' = Screen slides' (S 0) (SD $ Rectangle 0 0 900 600)
+deck = StackSet (scrn intro) [] otherSections
+  where
+    scrn slides' = Screen slides' (S 0) (SD $ Rectangle 0 0 1000 700)
+    otherSections = [toSection t o slides
+                      | (t, o, slides) <- [
+                         ("oHm", V, ohms)
+                       , ("Concepts", H, concepts)
+                       , ("Alternatives", H, alternatives)
+                                         ]]

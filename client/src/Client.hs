@@ -10,6 +10,7 @@ import Data.Foldable
 import qualified Data.Set as Set
 import qualified Data.Text as T
 import Control.Lens
+import Control.Concurrent (threadDelay)
 import           MVC
 import Ohm.SocketIO ( SocketIO, socketIONew, socketIOWaitForConnection, socketIOOpen
                 , sioSend, sioSend_, sioSub
@@ -54,14 +55,17 @@ main = do
   sioSub s "sessions" $ \(Set.toList -> keys) -> do
     liftIO $ putStrLn . T.unpack $ T.unlines keys
     forM_ (keys ^? _head) $ \k ->
-      sioSend s "client connect" $ CreateSession "LHUG"
+      sioSend s "client connect" $ ClientSession (k, "display")
 
   sioSub s "slide command" $ sendToModel modelSink
-
+  sioSub s "reload md" reloadMD
   forkProcessor () $ for (fromInput keySource) (runProcessor idProcessor)
                >-> (toOutput modelSink)
 
   where
+    reloadMD :: Bool -> IO ()
+    reloadMD _ = threadDelay 200000 >> convertMDSlides
     sendToModel evts a = do
-      print ("slide command", a)
+      putStrLn $ "slide command " ++ (show a)
       void . atomically $ PC.send evts a
+

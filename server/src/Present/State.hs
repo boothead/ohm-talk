@@ -82,6 +82,9 @@ server state = do
     --   forM_ ((,) <$> sn <*> f)$ \(sesName, op') ->
     --     STM.modifyTVar' (state ^. slideSessions) $ \sState -> sState & ix sesName %~ op'
     mapM_ (SocketIO.broadcast "slide command") e
+    case cc of
+      (CToSection _) -> SocketIO.broadcast "reload md" True
+      _ -> return ()
 
   SocketIO.on "client connect" $ \(ClientSession (sn, cname)) -> do
     liftIO $ STM.atomically $ do

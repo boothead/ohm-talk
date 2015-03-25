@@ -11,8 +11,6 @@ import Pipes
 import qualified Pipes.Concurrent as PC
 --import Prelude hiding ((.))
 import Control.Applicative
-import Data.Foldable (traverse_)
-import Data.Monoid ((<>))
 import qualified Data.Text as T
 import Ohm.Component
 import Ohm.HTML
@@ -51,7 +49,7 @@ wsEmit_ chan = do
 -- Render
 
 renderPresenter :: Renderer SlideCommand (ClientAppState SModel Edom)
-renderPresenter c@(DOMEvent chan) (AppState ss _)=
+renderPresenter (DOMEvent chan) (AppState ss _)=
   container [
       row [with div_ (A.classes .= ["btn-group"])
             (btn . mkToSection <$> workspaceTags ss)
@@ -87,7 +85,7 @@ slidePresenter = Component slideModel renderPresenter p
 main :: IO ()
 main = do
   _ <- initDomDelegator
-  s <- socketIONew "http://localhost:8000"
+  s <- socketIONew "http://192.168.1.225:8000"
   putStrLn "socket"
   socketIOOpen s
   socketIOWaitForConnection s
@@ -98,5 +96,5 @@ main = do
   sioSub s "slide command" $ sendToModel modelEvents
   where
     sendToModel evts a = do
-      print ("slide command", a)
+      putStrLn $ "slide command" ++ (show a)
       void . atomically $ PC.send evts a
